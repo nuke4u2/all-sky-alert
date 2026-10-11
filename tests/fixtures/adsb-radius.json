@@ -1,0 +1,7 @@
+{"now":1791309600000,"ac":[
+  {"hex":"abc123","flight":"JBU123  ","t":"A320","lat":51.47,"lon":-0.02,"alt_geom":8200,"alt_baro":8000,"gs":180,"track":45,"geom_rate":0,"seen_pos":2,"type":"adsb_icao","squawk":"1200"},
+  {"hex":"def456","lat":51.45,"lon":-0.1,"alt_baro":5000,"gs":210,"track":60,"baro_rate":500,"seen_pos":5,"type":"mlat"},
+  {"hex":"112233","lat":51.46,"lon":0.05,"alt_baro":"ground","seen_pos":1},
+  {"hex":"~a12345","lat":51.46,"lon":0.05,"alt_geom":6000,"seen_pos":1},
+  {"hex":"445566","alt_geom":6000,"seen_pos":1}
+]}

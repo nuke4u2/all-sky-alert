@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block scripts %}
+<link rel="stylesheet" href="{{ url_for('static',path='vendor/leaflet/leaflet.css') }}">
+<script src="{{ url_for('static',path='vendor/leaflet/leaflet.js') }}" defer></script>
+<script src="{{ url_for('static',path='map.js') }}" defer></script>
+{% endblock %}
+{% block content %}
+<h1>Live aircraft</h1><p>Routine tracks appear independently of alert interest. Solid lines are observed breadcrumbs; dashed lines are short constant-motion estimates. Routes are separately sourced metadata, never inferred from a heading.</p>
+<div class="actions"><button id="map-center" type="button">Center on observer</button><label class="control"><input id="map-projections" type="checkbox" checked>Show estimated continuations</label></div>
+<p id="map-status" role="status">Loading normalized aircraft data…</p><div id="aircraft-map" aria-label="Aircraft map. Pan or zoom; select an aircraft marker or the list below."></div>
+<p class="muted">Online street tiles contact the configured tile provider and reveal the viewed region. Disable tiles in Settings for a private blank base map. <a href="https://www.openstreetmap.org/fixthemap">Report a map issue</a>.</p>
+<h2>Aircraft detail</h2><div id="aircraft-detail" class="card" aria-live="polite">Select an aircraft on the map or in the list.</div>
+<h2>Nearby aircraft</h2><div id="aircraft-list" class="choices"></div><p>Position data: <a href="https://www.adsb.lol/docs/open-data/api/">ADSB.lol · ODbL 1.0</a>. Coverage gaps and stale data can make the map empty. No visual sighting is confirmed.</p>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block scripts %}<script src="{{ url_for('static',path='settings.js') }}" defer></script>{% endblock %}
+{% block content %}
+<h1>Settings</h1><p>Trusted home LAN controls. Saved settings require a service restart. Observer location, network binding, credentials, secret paths and source URLs are protected from web editing.</p>
+{% if restart_required %}<p class="safety">Saved settings differ from the running service. Restart required.</p>{% endif %}
+<form id="settings-form" data-csrf="{{ csrf }}" data-revision="{{ revision }}"><div class="settings-grid">
+{% for section,title in [('detectors.','Detection families'),('atmosphere.','Shared atmosphere'),('providers.','External sources'),('map.','Aircraft map'),('notifications.','Alert policy'),('gmail.','Gmail delivery'),('service.','History')] %}
+<fieldset><legend>{{ title }}</legend>
+{% for key,field in fields.items() %}{% if key.startswith(section) %}
+{% if field.kind=='bool' %}<label class="control"><input type="checkbox" name="{{ key }}" data-kind="bool" {% if field.value %}checked{% endif %}>{{ field.label }}</label>
+{% elif field.kind=='number' %}<label class="control numeric">{{ field.label }}<input type="number" step="any" name="{{ key }}" data-kind="number" value="{{ field.value }}" required></label>
+{% elif field.kind=='types' %}<p>Choose which event families may produce email. Local records and filters are independent.</p><label class="control"><input type="checkbox" id="email-all" {% if '*' in field.value %}checked{% endif %}>All current and future families</label><div class="choices">{% for name,spec in categories.items() %}<label><input type="checkbox" name="email-type" value="{{ name }}" {% if '*' in field.value or name in field.value %}checked{% endif %}>{{ spec.label or name }}</label>{% endfor %}</div><p class="muted">An explicit selection excludes future families; none disables event emails. Historical milestones are never replayed. OAuth setup remains a separate local CLI operation.</p>
+{% endif %}{% endif %}{% endfor %}</fieldset>{% endfor %}
+</div><button type="submit" class="primary">Save settings — restart required</button><p id="settings-result" role="status" aria-live="polite"></p><noscript>JavaScript is required to safely save this bounded form.</noscript></form>
+{% endblock %}

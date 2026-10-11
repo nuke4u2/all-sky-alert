@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block refresh %}<meta http-equiv="refresh" content="300">{% endblock %}
+{% block scripts %}{% if aircraft_enabled %}<script src="{{ url_for('static', path='live.js') }}" defer></script>{% endif %}{% endblock %}
+{% macro cards(predictions) %}
+<div class="cards">
+{% for p in predictions %}{% set e = p.candidate %}{% set a = p.assessment %}
+<article class="card">
+  <div class="eyebrow">{{ 'Planetary observing' if e.detector == 'planetary' else 'Sunset · experimental' if e.detector == 'sunset' else e.kind|replace('.', ' ')|title }} <span class="badge">{{ p.state|replace('_', ' ')|title }}</span></div>
+  <h3><a href="/events/{{ e.id }}">{{ e.title }}</a></h3>
+  {% if p.inputs_expired %}<p class="muted">Recorded prediction inputs have expired; awaiting an update.</p>{% endif %}
+  {% if e.metadata.safety %}<p class="safety">Solar viewing requires appropriate protection and front-aperture telescope filters. <a href="{{ e.metadata.safety.url|safe_url }}">NASA safety guidance</a></p>{% endif %}
+  <p class="time">{{ e.peak|localtime }} <small>peak</small></p>
+  <div class="scores"><div><span>Intrinsic interest</span><strong>{{ e.interest|round|int }}<small>/100</small></strong></div><div><span>Observing quality</span><strong>{{ a.quality|round|int if a.quality is not none else 'Unknown' }}{% if a.quality is not none %}<small>/100</small>{% endif %}</strong></div></div>
+  <p>{{ e.reasons[0] }}</p>
+  {% if e.detector == 'aurora' %}<p>{{ e.geometry.elevation_min_deg }}–{{ e.geometry.elevation_max_deg }}° elevation scenario · {% if e.geometry.azimuth_deg is none %}overhead{% else %}bearing {{ e.geometry.azimuth_deg }}°{% endif %}. Forecast {{ e.metadata.forecast_time|localtime }}; source {{ e.metadata.source_status }}.</p>{% endif %}
+  <p class="muted">{% if a.conditions.metrics.cloud_total %}Cloud {{ a.conditions.metrics.cloud_total.value|round|int }}% · {% endif %}{% if e.detector == 'planetary' %}{% set seeing = a.conditions.metrics.seeing_index %}{% if seeing %}Canadian seeing: {% if seeing.value == 0 %}cloud masked{% else %}{{ ['Masked', 'Very bad', 'Poor', 'Average', 'Good', 'Excellent'][seeing.value|int] }} ({{ seeing.value|int }}/5){% endif %}{% if seeing.status == 'stale' %} · stale{% endif %}{% elif a.conditions.metrics.seeing_wind_proxy %}Wind suitability {{ a.conditions.metrics.seeing_wind_proxy.value|round|int }}/100 · seeing forecast unavailable{% else %}Seeing unknown{% endif %}{% elif e.detector == 'sunset' %}Cloud-layer color heuristic{% endif %}</p>
+  <p class="muted">Occurrence confidence {{ (e.occurrence_confidence * 100)|round|int }}% · observing confidence {{ (a.confidence * 100)|round|int }}% · weather {{ a.conditions.status|replace('_', ' ') }}</p>
+  <div class="card-bottom"><span>Alerts: {{ p.alert_status }}</span><a href="/events/{{ e.id }}">Why this event →</a></div>
+</article>
+{% else %}<p class="empty">No predictions in this window. Initial evaluation may still be running; check service health below.</p>{% endfor %}
+</div>
+{% endmacro %}
+{% block content %}
+<div class="intro"><p class="eyebrow">Your observing outlook</p><h1>What’s worth looking up for?</h1><p>Event importance and observing conditions, kept separate so the sky’s big moments stay visible.</p></div>
+<form method="get" class="filters" id="event-filters"><fieldset><legend>Active & upcoming event families</legend><input type="hidden" name="filter" value="1"><div class="choices">{% for name,spec in filter_choices.items() %}<label><input type="checkbox" name="types" value="{{ name }}" {% if name in selected_types %}checked{% endif %}>{{ spec.label or name }}</label>{% endfor %}</div><div class="actions"><button type="button" data-selection="all">All</button><button type="button" data-selection="none">None</button><button type="submit">Apply filters</button></div></fieldset></form>
+{% if map_enabled %}<p><a class="button" href="/aircraft">Open live aircraft map →</a></p>{% endif %}
+<h2>Now</h2><p class="muted">Active predicted windows. Aurora forecasts are model opportunities; they are not confirmed sightings.</p>
+{% if aircraft_enabled %}<section aria-label="Live aircraft"><h3>Aircraft now & approaching</h3><p class="muted" id="live-status">Loading fresh recorded positions; updates every 15 seconds.</p><div id="live-aircraft" class="cards" aria-live="polite"></div><noscript><p>Enable JavaScript for live aircraft updates, or open <a href="/api/live">live aircraft JSON</a>.</p></noscript></section>{% endif %}
+<p class="muted">Scores and confidence are heuristic ratings, not calibrated probabilities of a sighting.</p>
+{{ cards(active) }}
+<h2>Upcoming</h2><p class="muted">Ordered by interest and observing quality. Open an event for its full window and reasoning.</p>
+{{ cards(upcoming|rejectattr('candidate.detector', 'equalto', 'adsb')|list) }}
+<h2>Recent predictions</h2><p class="muted">Events that ended within the previous {{ recent_hours }} hours. History fills as the service runs.</p>
+{{ cards(recent) }}
+{% if inbox %}<details><summary>Recent alerts · {{ inbox|length }}</summary><ul>{% for alert in inbox %}<li><a href="/events/{{ alert.event_id }}">{{ alert.prediction.candidate.title }}</a> · {{ alert.stage }} · {{ alert.created_at|localtime }}</li>{% endfor %}</ul></details>{% endif %}
+<details open id="source-health"><summary>Sources & service health</summary>
+{% if overall.issues %}<ul>{% for issue in overall.issues %}<li>{{ issue }}</li>{% endfor %}</ul>{% endif %}
+<div class="table-wrap"><table><thead><tr><th>Source / used by</th><th>Status</th><th>Data and retrieval</th><th>Refresh / validity</th></tr></thead><tbody>
+{% for s in sources %}<tr><td>{{ s.name }}<br><small>{{ s.kind }} · {{ s.consumers|join(', ') }}</small></td><td>{{ s.status }}{% if s.cached %}<br><small>Cached</small>{% endif %}{% if s.error %}<br>{{ s.error }}{% endif %}</td>
+<td>{% if s.data_at %}Observed {{ s.data_at|localtime }}{% elif s.issued_at %}Model run {{ s.issued_at|localtime }}{% elif s.kind == 'local' %}{{ s.details.library }} {{ s.details.version }}{% else %}Upstream issue time unavailable{% endif %}{% if s.age_seconds is not none %}<br>{{ 'Retrieval age' if s.details.freshness_basis == 'retrieval' else 'Data age' }} {{ (s.age_seconds/60)|round(1) }} min{% endif %}{% if s.retrieved_at %}<br>Retrieved {{ s.retrieved_at|localtime }}{% endif %}</td>
+<td>{% if s.kind != 'local' %}Refresh {{ (s.policy.cadence_seconds/60)|round(1) }} min{% endif %}{% if s.next_refresh %}<br>Next eligible refresh {{ s.next_refresh|localtime }}{% endif %}{% if s.valid_until %}<br>{{ 'Application window ends' if s.name == 'swpc.ovation' else 'Coverage ends' }} {{ s.valid_until|localtime }}{% endif %}{% if s.kind == 'local' %}{{ s.details.validity }}{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>Component</th><th>Status</th><th>Last check</th><th>Information</th></tr></thead><tbody>{% for h in health %}<tr><td>{{ h.name|replace('detector:', '')|replace('delivery:', 'Email: ') }}</td><td>{{ h.status }}</td><td>{{ h.checked_at|localtime }}</td><td>{{ h.message }}</td></tr>{% else %}<tr><td colspan="4">Starting the first evaluation…</td></tr>{% endfor %}</tbody></table></div></details>
+{% endblock %}

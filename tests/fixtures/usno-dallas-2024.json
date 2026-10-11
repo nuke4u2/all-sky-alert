@@ -1,0 +1,10 @@
+{
+  "source": "https://aa.usno.navy.mil/api/eclipses/solar/date?date=2024-04-08&coords=32.7767,-96.7970&height=130",
+  "retrieved": "2026-10-09",
+  "api_version": "4.0.1",
+  "time_scale": "UT1; engine UTC comparison allows 60 s including ephemeris/Delta T differences",
+  "observer": [32.7767, -96.797, 130],
+  "date": "2024-04-08",
+  "kind": "total",
+  "contacts": {"partial_begin":"17:23:14.6", "total_begin":"18:40:37.7", "peak":"18:42:33.0", "total_end":"18:44:30.2", "partial_end":"20:02:35.7"}
+}

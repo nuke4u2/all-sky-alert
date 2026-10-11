@@ -1,0 +1,14 @@
+.git
+.venv
+data
+secrets
+config.toml
+test-artifacts
+.pytest_cache
+**/__pycache__
+**/*.egg-info
+*.json
+*.json.tmp
+*.sqlite*
+*.db
+.env

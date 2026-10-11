@@ -1,0 +1,190 @@
+# Copy to config.toml, then replace the example coordinates with YOUR location.
+# Greenwich is a demonstration location, not a personal default.
+[observer]
+latitude = 51.4779
+longitude = 0.0
+elevation_m = 46.0
+timezone = "Europe/London"
+
+[service]
+data_dir = "data"
+interval_seconds = 300
+recent_hours = 2
+prediction_days = 7
+retention_days = 90
+allowed_hosts = ["localhost", "127.0.0.1", "::1"]
+bind_host = "127.0.0.1" # LAN: 0.0.0.0 plus lan_access=true and exact private hosts.
+port = 8008
+lan_access = false
+trusted_proxy_ips = [] # Exact private proxy IPs only; default ignores forwarding.
+
+[detectors.planetary]
+enabled = true
+interval_seconds = 3600 # Reuse geometry; atmosphere/policy still update every slow cycle.
+bodies = ["Jupiter", "Saturn", "Mars"]
+minimum_altitude_deg = 25
+maximum_sun_altitude_deg = -6
+aperture_mm = 203.2
+
+[detectors.sunset]
+enabled = true
+interval_seconds = 86400
+
+[detectors.eclipses]
+enabled = true
+horizon_days = 730 # Independent of the short planetary horizon.
+interval_seconds = 21600
+solar = true
+lunar = true
+penumbral = false
+minimum_altitude_deg = 0 # Airless body center; terrain is not modeled.
+
+[detectors.aurora]
+enabled = true
+interval_seconds = 300
+minimum_intensity = 10 # Native NOAA proxy, not local visual probability.
+minimum_horizon_elevation_deg = 0
+maximum_sun_altitude_deg = -6
+emission_height_min_km = 110
+emission_height_max_km = 250
+
+# Only acquired when an enabled detector declares this dependency.
+
+[detectors.sky_crystals]
+enabled = true # Coarse opportunity forecasts; crystal orientation/habit unknown.
+interval_seconds = 1800
+horizon_hours = 48
+minimum_opportunity = 35
+phenomena = ["halo22", "parhelia", "cza", "upper_tangent", "lower_tangent", "pillar", "lunar_halo", "diamond_dust"]
+diamond_temperature_c = -20
+[providers.swpc]
+enabled = true
+cache_seconds = 300
+stale_after_minutes = 30
+invalid_after_minutes = 60
+
+# Shared modern GP/OMM; omitted Phase 3 detectors default disabled in old configs.
+
+[providers.hrrr]
+enabled = false # Optional .[hrrr] decoder; ~25 MB per selected six-hour run.
+cache_seconds = 3600
+max_run_age_hours = 8
+levels = [20, 30]
+forecast_hours = [3, 6]
+max_download_mb = 32
+[detectors.iss]
+enabled = true
+interval_seconds = 300
+horizon_hours = 48
+catalog_ids = [25544] # Other configured objects use the same pass geometry, not a brightness model.
+minimum_altitude_deg = 20
+maximum_sun_altitude_deg = -6
+
+[detectors.iss_transits]
+enabled = true # Experimental nominal center-track geometry; GP has no covariance.
+interval_seconds = 300
+horizon_hours = 24
+bodies = ["Sun", "Moon"]
+minimum_altitude_deg = 10
+
+[providers.orbits]
+enabled = true
+catalog_ids = [25544] # Include every ID used by detectors.iss; at most 10.
+cache_seconds = 7200 # CelesTrak GP updates only every two hours; never lower.
+warning_hours = 24
+stale_hours = 48
+invalid_hours = 96
+transit_current_hours = 12
+transit_target_hours = 24
+
+[detectors.adsb]
+enabled = true
+interval_seconds = 15
+minimum_altitude_deg = 30
+exit_altitude_deg = 20
+projection_seconds = 180
+absence_timeout_seconds = 180
+maximum_range_km = 80
+low_altitude_m = 2000
+interesting_callsigns = [] # Exact callsigns, e.g. ["JBU123"]. No route inference.
+interesting_types = [] # Provider type codes, e.g. ["A388"].
+interesting_icao24 = []
+emergency_squawks = true # Reported feed code, not an official emergency advisory.
+
+[providers.adsb]
+enabled = true
+cache_seconds = 15
+radius_nm = 60
+stale_seconds = 30 # Actual seen_pos age, not HTTP age.
+invalid_seconds = 90
+
+[providers.enrichment]
+enabled = false # Optional user-licensed records, never copied ADSBDB routes.
+path = "enrichment.json" # Relative to this configuration; see README schema.
+cache_seconds = 3600
+max_age_hours = 24
+
+[atmosphere]
+enabled = true
+cache_minutes = 60
+max_stale_hours = 6
+forecast_days = 10
+
+# Direct ECCC RDPS seeing index, shared/cached; no Clear Dark Sky scraping.
+# Set false to use only the explicitly uncalibrated wind fallback.
+[atmosphere.canadian]
+enabled = true
+cache_minutes = 60
+max_stale_hours = 6
+max_run_age_hours = 18
+max_grid_distance_km = 25
+
+[notifications]
+enabled = true
+minimum_interest = 35
+minimum_quality = 55
+minimum_confidence = 0.3
+exceptional_interest = 90
+watch_lead_hours = 168
+ready_lead_hours = 24
+imminent_lead_minutes = 60
+
+# Optional per-kind policy; same keys as notifications, e.g.:
+# [notifications.overrides."sunset.opportunity"]
+# minimum_quality = 70
+
+[notifications.overrides."iss.pass"]
+ready_lead_hours = 12
+imminent_lead_minutes = 5
+
+[notifications.overrides."spacecraft.pass"]
+ready_lead_hours = 12
+imminent_lead_minutes = 5
+
+[notifications.overrides."aircraft.episode"]
+minimum_interest = 70 # Limit routine traffic emails; configured interests still qualify.
+
+[notifications.overrides."iss.transit.sun"]
+ready_lead_hours = 12
+imminent_lead_minutes = 5
+
+[notifications.overrides."iss.transit.moon"]
+ready_lead_hours = 12
+imminent_lead_minutes = 5
+
+[gmail]
+enabled = false
+destination = ""
+client_secret = "secrets/client_secret.json"
+token = "secrets/gmail_token.json"
+event_types = ["*"] # All current/future families; explicit IDs exclude future types; [] none.
+
+[map]
+enabled = true
+tiles_enabled = true # Viewed region goes to tile provider; false uses a blank base map.
+tile_url = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+radius_km = 40
+track_minutes = 10 # Transient bounded observations; restart clears trails.
+max_aircraft = 150
+max_points = 80
+tile_attribution = "OpenStreetMap contributors"

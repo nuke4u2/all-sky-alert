@@ -1,0 +1,28 @@
+[
+  {
+    "body": "Sun",
+    "center": "2024-05-06T20:53:04.999776+00:00",
+    "observer": {
+      "latitude": -35.010406924629706,
+      "longitude": -177.0500223977166,
+      "elevation_m": 0,
+      "timezone": "UTC"
+    },
+    "ingress": "2024-05-06T20:53:04.431668+00:00",
+    "egress": "2024-05-06T20:53:05.567572+00:00",
+    "reference_method": "Direct SGP4 TEME / UTC GMST / Astronomy Engine 2.1.19; independent dense scan and bisection; observer chosen on nominal centerline, not an observed transit"
+  },
+  {
+    "body": "Moon",
+    "center": "2024-05-06T20:43:04.999776+00:00",
+    "observer": {
+      "latitude": -1.7182614633070703,
+      "longitude": 160.45595487492562,
+      "elevation_m": 0,
+      "timezone": "UTC"
+    },
+    "ingress": "2024-05-06T20:43:04.563139+00:00",
+    "egress": "2024-05-06T20:43:05.437378+00:00",
+    "reference_method": "Direct SGP4 TEME / UTC GMST / Astronomy Engine 2.1.19; independent dense scan and bisection; observer chosen on nominal centerline, not an observed transit"
+  }
+]

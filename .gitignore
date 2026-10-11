@@ -1,0 +1,51 @@
+# Python virtual environment
+.venv/
+
+# Python cache / compiled files
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Test / coverage artifacts
+.pytest_cache/
+pytest-cache-files-*/
+.coverage
+htmlcov/
+test-artifacts/
+
+# Build artifacts
+build/
+dist/
+
+# Runtime application data
+data/
+
+# Local configuration
+config.toml
+.env
+
+# Secrets / credentials
+secrets/
+*token*.json
+*token*.json.tmp
+*client*secret*.json
+*client*secret*.json.tmp
+credentials*.json
+
+# SQLite databases and companion files
+*.db
+*.db-wal
+*.db-shm
+*.sqlite*
+*.sqlite-wal
+*.sqlite-shm
+
+# Runtime locks
+*.lock
+
+# Local enrichment/runtime-generated data
+/enrichment.json
+
+# OS/editor junk
+.DS_Store
+Thumbs.db

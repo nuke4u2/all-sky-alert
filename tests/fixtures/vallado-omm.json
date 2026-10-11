@@ -1,0 +1,12 @@
+{"record":{"OBJECT_NAME":"VANGUARD 1","OBJECT_ID":"1958-002B","EPOCH":"2000-06-27T18:50:19.733568",
+  "NORAD_CAT_ID":5,"CLASSIFICATION_TYPE":"U","MEAN_MOTION":10.82419157,"ECCENTRICITY":0.1859667,
+  "INCLINATION":34.2682,"RA_OF_ASC_NODE":348.7242,"ARG_OF_PERICENTER":331.7664,"MEAN_ANOMALY":19.3264,
+  "BSTAR":0.000028098,"MEAN_MOTION_DOT":0.00000023,"MEAN_MOTION_DDOT":0,"EPHEMERIS_TYPE":0,"ELEMENT_SET_NO":475,"REV_AT_EPOCH":41366},
+ "reference":{"source":"Vallado et al. Revisiting Spacetrack Report #3 verification; sgp4 MIT distribution tcppver.out case 5",
+  "url":"https://celestrak.org/publications/AIAA/2006-6753/",
+  "frame":"TEME km and km/s, WGS72",
+  "vectors":[
+   {"minutes":0,"position":[7022.46529266,-1400.08296755,0.03995155],"velocity":[1.893841015,6.405893759,4.534807250]},
+   {"minutes":360,"position":[-7154.03120202,-3783.17682504,-3536.19412294],"velocity":[4.741887409,-4.151817765,-2.093935425]},
+   {"minutes":720,"position":[-7134.59340119,6531.68641334,3260.27186483],"velocity":[-4.113793027,-2.911922039,-2.557327851]}
+  ]}}
