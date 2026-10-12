@@ -98,8 +98,9 @@ defaults flow through validated `config-sync`, with enablement deliberately expl
 The map remains separate from persistent notifiable aircraft episodes. Its in-memory
 lock/count/time bounds permit fast updates independent of slower astronomical lanes.
 Health/config controls do not cause upstream acquisition. Settings protects core
-configuration and uses restart rather than a source-reload framework. Synology uses
-the same HTTP/UI/persistence components, directory mounts and explicit proxy policy.
+configuration and uses restart rather than a source-reload framework. Primary
+deployment is now native Raspberry Pi OS/Trixie; Synology/Docker is deprecated
+and unmaintained. See [Pi operation](raspberry-pi.md) and [camera design](camera-architecture.md).
 
 Deferred: authentication inside the app, full vertical profiles, directional cloud
 screening, a calibrated optical opportunity model, crystal habit/orientation,

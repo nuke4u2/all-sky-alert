@@ -18,6 +18,23 @@ port = 8008
 lan_access = false
 trusted_proxy_ips = [] # Exact private proxy IPs only; default ignores forwarding.
 
+# General Pi Camera / Timelapse (Camera Module 3), separate from future ZWO imaging.
+# Enable only after the Pi's apt Picamera2/rpicam diagnostics pass.
+[camera]
+enabled = false
+backend = "picamera2"
+camera_index = 0
+capture_directory = "camera/stills" # Relative to service.data_dir, must stay below it.
+preview_enabled = true
+preview_width = 640
+preview_height = 480
+preview_fps = 2 # 1–5; JPEG encoding only while a viewer is connected.
+
+[camera.timelapse]
+enabled = false # Start on service startup; Camera page Start/Stop is session-only.
+interval_seconds = 60 # 10–604800; scheduled from completion, no catch-up bursts.
+directory = "camera/timelapse" # Relative to service.data_dir.
+
 [detectors.planetary]
 enabled = true
 interval_seconds = 3600 # Reuse geometry; atmosphere/policy still update every slow cycle.

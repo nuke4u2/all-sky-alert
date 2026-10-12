@@ -23,8 +23,10 @@ from .source_health import FreshnessPolicy, SourceHealth, views
 
 class Service:
     def __init__(self, config: Config, *, store=None, conditions=None, detectors=None,
-                 profiles=None, astronomy=None, adapters=None, sources=None, clock=utcnow):
+                 profiles=None, astronomy=None, adapters=None, sources=None, camera=None, clock=utcnow):
         self.config, self.clock = config, clock
+        from .camera import CameraManager
+        self.camera = camera if camera is not None else CameraManager(config, clock=clock)
         self.store = store if store is not None else Store(config.data_dir / "all-sky-alert.sqlite3")
         self.client = httpx.Client(timeout=httpx.Timeout(20, connect=5), follow_redirects=False,
                                    headers={"User-Agent": "AllSkyAlert/0.1"})
@@ -302,4 +304,5 @@ class Service:
             now if now is not None else self.clock(), self.config.values["service"]["recent_hours"], recent=True)
 
     def close(self):
+        self.camera.close()
         self.client.close()

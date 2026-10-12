@@ -1,5 +1,11 @@
 # Phase 4 operation
 
+Primary deployment is now [native Raspberry Pi OS/Trixie](raspberry-pi.md), with
+the Pi LAN URL `http://allsky-pi4.local:8008/` after explicit configuration. The
+Windows addresses below describe the earlier Phase 4 development environment.
+Synology/Docker deployment is deprecated and unmaintained. General Pi Camera /
+Timelapse operation and the systemd procedure are in the Pi guide.
+
 ## LAN access
 
 Current Windows development configuration binds `0.0.0.0:8008`, accepts trusted
@@ -47,7 +53,6 @@ still pass network validation; wildcard/non-loopback binding requires LAN policy
 Forwarded headers are ignored by default. A reverse proxy must use an exact trusted
 peer IP in `trusted_proxy_ips`; wildcards/subnets are rejected. Keep the public-facing
 host explicitly allowlisted; forwarded host is not an alternative authorization.
-For Synology, preserve one worker and authenticated TLS proxy access controls.
 The service has no application authentication: every accepted trusted LAN client
 can read predictions/location and change the operational settings. Do not publish
 this admin surface to the public internet.
@@ -241,7 +246,7 @@ Sources: [NOAA public HRRR](https://registry.opendata.aws/noaa-hrrr-pds/),
 [ecCodes Python](https://github.com/ecmwf/eccodes-python),
 [optical altitude reference](https://www.atoptics.co.uk/blog/cza-effect-of-solar-altitude/).
 
-## Security and Synology review
+## Security review
 
 Exact Host validation handles ports/bracketed IPv6 and rejects malformed/duplicate
 headers. LAN peer checks and trusted-forwarded-peer configuration are distinct.
@@ -252,11 +257,9 @@ route was added. Unsupported methods receive framework 405. CSP blocks external
 scripts, eval, objects, framing and foreign form submission; map-only inline styles
 are allowed for Leaflet positioning. Configuration POSTs require exact same origin.
 
-Settings requires a writable **directory mount** at `/config` for atomic replacement;
-an individually bind-mounted file cannot be replaced safely. A read-only mount
-retains normal operation but rejects saves explicitly. SQLite and cache still use
-the persistent `/data` volume; OAuth stays on a separately protected `/secrets`
-volume. Use local NAS storage, one coordinator, no workers/reload scaling. Docker
-defaults install Gmail support; use build argument `EXTRAS=gmail,hrrr` for optional
-microphysics. Linux x86_64 checks do not replace hardware-specific Synology/ARM
-verification. Keep config/secrets/production data out of images and handoffs.
+Native deployment requires a writable configuration parent directory for atomic
+replacement, local SQLite storage and protected OAuth files. Use one coordinator,
+without workers/reload scaling. See [Pi deployment](raspberry-pi.md) for paths,
+systemd/device permissions and ARM64 acceptance. Synology/container deployment is
+deprecated; historical verification remains in the prior reports. Keep actual
+config, secrets and runtime data out of source transfers and handoffs.

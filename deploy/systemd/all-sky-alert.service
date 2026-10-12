@@ -1,0 +1,37 @@
+# Replace ALL_SKY_USER and /home/ALL_SKY_USER with the SSH account/project path.
+# Install only after foreground validation; this file does not enable itself.
+[Unit]
+Description=All Sky Alert predictions and General Pi Camera / Timelapse
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=ALL_SKY_USER
+WorkingDirectory=/home/ALL_SKY_USER/projects/all-sky-alert
+ExecStart=/home/ALL_SKY_USER/projects/all-sky-alert/.venv/bin/python -m all_sky_alert --config /home/ALL_SKY_USER/projects/all-sky-alert/config.toml serve
+SupplementaryGroups=video
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+UMask=0077
+Restart=on-failure
+RestartSec=10
+KillSignal=SIGTERM
+TimeoutStopSec=300
+KillMode=control-group
+NoNewPrivileges=true
+PrivateTmp=true
+# Camera requires real /dev/video*, /dev/media* and /dev/dma_heap/*.
+# Do not add PrivateDevices=true, a device whitelist, or ProtectHome=true.
+ProtectSystem=full
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

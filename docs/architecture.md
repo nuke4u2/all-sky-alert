@@ -4,7 +4,7 @@ Initial design recorded before implementation, 2026-10-06; extension reviewed
 2026-10-08 in [Phase 2 design](phase2-architecture.md), and 2026-10-09 in
 [Phase 3 design](phase3-architecture.md). This is a modular monolith:
 one process owns evaluation, SQLite writes and notification dispatch; HTTP reads
-the same database. Python fits the numerical astronomy ecosystem and modest NAS
+the same database. Python fits the numerical astronomy ecosystem and modest Pi
 hardware. Astronomy Engine supplies portable, local Sun/planet calculations
 without a downloaded kernel. FastAPI/Jinja provides a small HTML surface; stdlib
 SQLite and independently paced serial worker lanes avoid ORM, broker and scheduler complexity.
@@ -163,7 +163,7 @@ component health and one typed health record per source. Schema 2 additively
 upgrades schema 1; Phase 3's schema 3 additively adds track_episodes for observer/ICAO
 continuity across restart. Prediction and alert identities are unchanged. JSON envelopes keep
 extensions local; indexed identity/time columns support UI reads. Keep the database
-on a local NAS volume, not SMB/NFS shared by writers. Back up with SQLite's backup
+on local storage, not SMB/NFS shared by writers. Back up with SQLite's backup
 API or while stopped (do not copy just the main file of a live WAL database).
 
 One process has serial slow and live worker lanes plus an independent, bounded
@@ -239,11 +239,21 @@ OAuth. A preview-first test-email command requires an explicit --send flag and u
 the configured recipient. No live email is sent by tests. Missing Gmail setup
 cannot stop prediction evaluation or UI delivery. Restrict token filesystem access.
 
-Docker runs one non-root Python process, maps /data for SQLite/cache and mounts
-config/secrets separately. Bind published port to localhost first. For a trusted
-LAN add explicit allowed hosts; before broader exposure add reverse-proxy TLS,
-authentication and deployment-specific access controls. No NAS-specific business
-logic; x86_64/ARM portability depends only on supported Python wheels.
+Native Raspberry Pi OS Lite 64-bit/Trixie is the primary deployment: system Python
+venv, local config/data and an unprivileged systemd service with explicit LAN
+binding/hosts. Docker/Synology deployment is deprecated and unmaintained; preserved
+Docker assets and earlier reports are historical. See [Pi operation](raspberry-pi.md).
+
+General Pi Camera / Timelapse is independent of scientific prediction contracts.
+`service.py` constructs a camera manager without opening hardware; web lifespan
+starts it under the existing coordinator lock. One dedicated thread owns lazy
+Picamera2 calls, full-resolution still captures, a monotonic completion-paced
+timelapse and demand-only bounded preview. Read-only UI/status never opens camera
+hardware or initiates prediction/provider acquisition. Explicit camera POSTs queue
+commands; session timelapse controls update only the camera schedule. Config saves
+still use the existing validated atomic editor and require restart. Camera faults
+do not veto prediction capabilities. See [camera design](camera-architecture.md)
+for resource, backend and shutdown contracts; ZWO/image analysis remain deferred.
 
 ## Extension procedures and deliberately deferred decisions
 

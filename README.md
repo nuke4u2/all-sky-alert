@@ -32,7 +32,27 @@ occultations, comets and Jovian/GRS remain deferred. Phase 4 extensions and limi
 are recorded in [design](docs/phase4-architecture.md),
 [operation](docs/phase4-operation.md) and [verification](docs/phase4-verification.md).
 
-## Windows development
+## Raspberry Pi native deployment (recommended)
+
+Deploy natively on **allsky-pi4**: Raspberry Pi OS Lite 64-bit / Debian 13 Trixie,
+system Python venv, one unprivileged process and systemd. Docker/Synology deployment
+is deprecated and currently unmaintained. The complete [Pi installation guide](docs/raspberry-pi.md)
+provides apt packages, clean-install commands, private-state migration, LAN setup,
+camera diagnostics, foreground acceptance and the reviewed systemd installation.
+
+**General Pi Camera / Timelapse** adds a separate Camera tab for Camera Module 3:
+demand-only low-rate MJPEG, supported autofocus/manual lens controls, full-resolution
+JPEG captures and a configurable timelapse. Camera hardware has one owner thread,
+independent of prediction workers. It is disabled by default and requires apt
+Picamera2/libcamera on the Pi. This is separate from a future **ZWO All-Sky Camera**;
+no image analysis or ZWO support is implemented. [Verification and limitations](docs/pi-verification.md)
+distinguish offline tests from outstanding hardware acceptance.
+
+The expected trusted LAN URL is **http://allsky-pi4.local:8008/** after explicit
+network configuration. Start with Gmail disabled and run `check` before `serve`.
+Config saves require restart; Camera session Start/Stop works immediately.
+
+## Windows development (supported secondary path)
 
 Run these exact PowerShell commands from the project directory. Python 3.12 or
 newer must be installed; the Windows `py` launcher avoids Store alias problems.
@@ -76,9 +96,9 @@ tables below or use `config-sync`. The example enables them; preserve your obser
 settings when upgrading. This phase updated the existing development configuration
 explicitly: **LAN and atmospheric optics are enabled; Gmail remains disabled**.
 
-The current development LAN URL is **http://192.168.1.40:8008/** (hostname
-`Weissbier`). Localhost remains **http://127.0.0.1:8008/**. The IP can change with
-DHCP; see [LAN configuration and security](docs/phase4-operation.md#lan-access).
+The recommended Pi LAN URL is **http://allsky-pi4.local:8008/**. Localhost remains
+**http://127.0.0.1:8008/**. See [Pi setup](docs/raspberry-pi.md) and
+[LAN configuration and security](docs/phase4-operation.md#lan-access).
 There is no authentication in this trusted-home-LAN phase. Any trusted LAN user
 can use Settings; use an authenticated TLS reverse proxy before broader access.
 
@@ -161,6 +181,8 @@ to catch misspelled settings. Restart after edits. Tables isolate concerns:
 | notifications | enabled, interest/quality/confidence thresholds, exceptional-interest bypass, milestone lead times |
 | notifications.overrides."event.kind" | per-kind policy overrides using the same keys |
 | gmail | enabled, destination, client_secret path, token path |
+| camera | enabled, picamera2 backend/index, data-relative capture directory, preview toggle/size/fps |
+| camera.timelapse | startup enabled, interval_seconds (10–604800), data-relative directory |
 
 The common prediction horizon can extend to 365 days; the eclipse module has its
 own horizon (default 730 days, maximum 3650), avoiding years of nightly planet sampling.
@@ -508,47 +530,11 @@ Gmail/dev/HRRR/QA dependencies; constraints do not install extras by themselves.
 The [Phase 4 verification report](docs/phase4-verification.md) includes optional
 fixture-only Edge mobile/LAN checks and the separate public HRRR decoder probe.
 
-## NAS/container deployment
+## Deprecated container deployment
 
-The Dockerfile was built and smoke-tested in an offline Linux container; it has
-not been tested on Synology hardware. Build with `docker build -t all-sky-alert .`.
-It runs as UID/GID
-10001 and includes the optional Gmail libraries. Use a local NAS directory/volume
-owned by that UID for `/data`; do not use a remote SMB database or multiple writers.
-For container ingress set `service.bind_host="0.0.0.0"` and `lan_access=true`,
-with exact localhost/NAS hosts. Docker uses these configured binding values.
-Mount your configuration directory at `/config`; make it writable by UID 10001
-only if Settings saves are wanted (atomic replace requires directory permission).
-Use a read-only directory mount for read-only operation. Set data_dir to
-`/data`, and secret paths to `/secrets/client_secret.json` and
-`/secrets/gmail_token.json` when needed. Mount `/secrets` privately writable for
-token refresh, client secret read-only if feasible. For example:
-
-```bash
-docker run -d --name all-sky-alert --restart unless-stopped \
-  -p 127.0.0.1:8008:8008 \
-  -v /volume1/all-sky-alert/data:/data \
-  -v /volume1/all-sky-alert/config:/config:ro \
-  all-sky-alert
-```
-
-If enabling Gmail add the private `/secrets` mount. Authorize on the Windows
-development machine first; no interactive OAuth browser is required on the NAS.
-If enabling local enrichment, mount its licensed JSON read-only and set
-`providers.enrichment.path` to that container path; it is excluded from the image.
-The default local `enrichment.json` is also gitignored; keep licensed inputs outside
-source control.
-For trusted home LAN access set `service.lan_access=true`, bind `0.0.0.0`, publish
-the intended private NAS interface and add the NAS hostname/IP to exact allowed
-hosts. Explicit IPv6 hosts are supported. Default forwarded headers are ignored;
-configure only exact trusted proxy IPs when needed. Non-loopback container binding
-requires LAN policy to be enabled. Use reverse-proxy authentication/TLS before wider exposure.
-Optional microphysics image: `docker build --build-arg EXTRAS=gmail,hrrr -t all-sky-alert .`.
-
-Back up while stopped or via Python `sqlite3.Connection.backup()`. Copying only a
-live WAL database file can lose transactions. Retention deletes old ended events
-and their revision/alert/delivery rows, while keeping future predictions and
-deduplication records. Provider cache is small and keyed by observer/source options.
+Synology/Docker deployment is currently unmaintained. `Dockerfile`, `.dockerignore`
+and prior container reports remain for historical/future use; they are not the
+recommended Pi path. Follow [native Raspberry Pi deployment](docs/raspberry-pi.md).
 
 ## Next steps
 
@@ -565,6 +551,5 @@ The [source matrix](docs/source-capabilities.md) records the other seven familie
 data gaps and acceptance gates. Use [HANDOFF.md](HANDOFF.md) for bounded local
 Qwen/OpenClaw tasks. Core architectural changes remain with Codex/Astra.
 
-No git commit has been created. This starting directory did not contain a git
-repository; initialize it separately when you are ready. Project licensing is
-deliberately left for the owner; referenced project code was not copied.
+Project licensing is deliberately left for the owner; referenced project code
+was not copied.

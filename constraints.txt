@@ -43,7 +43,9 @@ skyfield==1.55
 sgp4==2.27
 skyfield-data==7.0.0
 jplephem==2.24
-numpy==2.5.3
+# Keep Raspberry Pi OS's apt NumPy with its native Picamera2 extensions.
+# Record apt versions on the Pi; this exception also applies to other Linux ARM64.
+numpy==2.5.3; platform_system != "Linux" or (platform_machine != "aarch64" and platform_machine != "arm64")
 tomlkit==0.15.1
 attrs==26.1.0
 eccodes==2.49.0

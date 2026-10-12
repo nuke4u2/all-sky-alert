@@ -11,7 +11,7 @@
 </head>
 <body>
 <header><a class="brand" href="/">✦ All Sky Alert</a><span>{{ timezone }} · {{ '%.3f'|format(observer.latitude) }}°, {{ '%.3f'|format(observer.longitude) }}°</span></header>
-<nav aria-label="Main navigation"><a href="/">Predictions</a>{% if map_enabled %}<a href="/aircraft">Live aircraft map</a>{% endif %}<a href="/settings">Settings</a><a href="/#source-health">Data health</a></nav>
+<nav aria-label="Main navigation"><a href="/">Predictions</a>{% if map_enabled %}<a href="/aircraft">Live aircraft map</a>{% endif %}<a href="/camera">Camera</a><a href="/settings">Settings</a><a href="/#source-health">Data health</a></nav>
 <main><a href="/#source-health" class="stoplight {{ overall.status }}" id="overall-health" role="status"><strong id="health-label">● {{ overall.status|upper }} · {{ overall.label }}</strong><span id="health-summary">{{ overall.summary }}</span><small id="health-time">Last evaluation: {{ overall.evaluated_at|localtime if overall.evaluated_at else 'waiting' }}</small></a>{% block content %}{% endblock %}</main>
 <footer>Weather: <a href="https://open-meteo.com/">Open-Meteo</a> · CC BY 4.0. Canadian seeing: <a href="https://eccc-msc.github.io/open-data/msc-data/nwp_rdps/readme_rdps-datamart_en/">Environment and Climate Change Canada</a> · <a href="https://eccc-msc.github.io/open-data/licence/readme_en/">ECCC Data Services End-use Licence</a>. Quality scores and confidence indicators are heuristic estimates. Times shown in {{ timezone }}. Aircraft and overall health refresh every 15 seconds.</footer>
 {% block after_content %}{% endblock %}

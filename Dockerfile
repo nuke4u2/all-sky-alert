@@ -1,3 +1,4 @@
+# Deprecated/unmaintained deployment asset; native Pi setup: docs/raspberry-pi.md.
 FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app

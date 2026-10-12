@@ -35,6 +35,12 @@ def field_definitions():
             ("detectors.sky_crystals.diamond_temperature_c","Diamond-dust temperature ceiling (°C)")):
         add(path,label,"number")
     add("gmail.event_types","Email event families","types")
+    for path,label in (("camera.enabled","General Pi Camera"),("camera.preview_enabled","Camera preview"),
+                       ("camera.timelapse.enabled","Start timelapse on service startup")):
+        add(path,label,"bool")
+    for key,label in (("preview_width","Preview width (pixels)"),("preview_height","Preview height (pixels)"),
+                      ("preview_fps","Preview frames per second"),("timelapse.interval_seconds","Timelapse interval (seconds; minimum 10)")):
+        add("camera."+key,label,"number")
     return fields
 
 

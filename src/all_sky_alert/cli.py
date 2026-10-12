@@ -24,10 +24,11 @@ def main():
     parser = argparse.ArgumentParser(description="All Sky Alert local service")
     parser.add_argument("--config", default="config.toml", help="TOML configuration path")
     commands = parser.add_subparsers(dest="command", required=True)
-    serve = commands.add_parser("serve", help="Run localhost UI and independently paced prediction workers")
+    serve = commands.add_parser("serve", help="Run the configured local/LAN UI and prediction workers")
     serve.add_argument("--host", default=None, help="Override validated configured bind_host")
     serve.add_argument("--port", type=int, default=None)
     commands.add_parser("evaluate", help="One evaluation cycle, using enabled notification adapters")
+    commands.add_parser("check", help="Offline config, database write and component initialization check; stop service first; no fetch/mail/camera open")
     commands.add_parser('config-sync',help='Validate and add missing defaults, preserving all supplied values; restart required')
     commands.add_parser("reset-orbit-source", help="Explicitly clear CelesTrak HTTP stop after investigating the error; no fetch/email")
     smoke = commands.add_parser("source-smoke", help="Explicit public-source connectivity check; separate storage, no mail/credentials")
@@ -90,18 +91,31 @@ def main():
         if args.command == "serve":
             import uvicorn
             from .web import create_app
+            from .server import ApplicationServer
             from .network import validate_network
             settings={**config.values['service'],'bind_host':config.values['service']['bind_host'] if args.host is None else args.host,
                       'port':config.values['service']['port'] if args.port is None else args.port}
             validate_network(settings)
             proxies=settings['trusted_proxy_ips']
-            uvicorn.run(create_app(service), host=settings['bind_host'], port=settings['port'], workers=1, log_level="info",
-                        proxy_headers=bool(proxies),forwarded_allow_ips=','.join(proxies))
+            server_config = uvicorn.Config(create_app(service), host=settings['bind_host'], port=settings['port'], workers=1, log_level="info",
+                        proxy_headers=bool(proxies),forwarded_allow_ips=','.join(proxies), timeout_graceful_shutdown=10)
+            try:
+                ApplicationServer(server_config, service.camera).run()
+            finally:
+                service.close()
             return
         try:
             with ServiceLock(config.data_dir):
                 service.recover()
-                if args.command == "retry-delivery":
+                if args.command == "check":
+                    import platform
+                    service.store.health('startup-check', 'ok', utcnow(), 'Offline configuration and SQLite write check passed')
+                    print(f"Python {platform.python_version()} / {platform.machine()}")
+                    print(f"Configuration valid; SQLite writable: {service.store.path}")
+                    print("Initialized detectors: " + ', '.join(service.detector_names))
+                    print("Initialized domain providers: " + ', '.join(service.sources))
+                    print("No provider acquisition, prediction evaluation, mail or camera open performed.")
+                elif args.command == "retry-delivery":
                     if not args.acknowledge_possible_duplicate:
                         raise ValueError("Explicit --acknowledge-possible-duplicate is required")
                     if not service.store.retry_delivery(args.id, utcnow()):

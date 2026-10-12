@@ -1,5 +1,16 @@
 # Bounded developer handoff
 
+Primary deployment is now native Raspberry Pi OS Lite 64-bit/Trixie with a system
+Python venv and systemd; Synology/Docker is deprecated and unmaintained. Read
+[Pi operation](docs/raspberry-pi.md), [camera design](docs/camera-architecture.md)
+and [verification](docs/pi-verification.md) for camera/deployment handoffs.
+Camera Module 3 is **General Pi Camera / Timelapse**, not the deferred ZWO All-Sky
+Camera. Camera tasks may touch explicitly allowed `camera/` modules and UI/tests,
+but must keep one hardware owner, bounded previews/commands, offline fake-backend
+tests and prediction/provider isolation. Saved TOML requires restart; explicit
+camera session controls do not reload config. Never give a local handoff actual
+config, camera captures, secrets, mail or permission to install/enable systemd.
+
 Copy this template into a task document (e.g. docs/handoffs/task-name.md). Supply
 explicit paths and acceptance criteria. Completion returns a diff and report for
 Codex/Astra review; no commits, pushes or merges by default. This is a development

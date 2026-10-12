@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -23,6 +23,7 @@ from .registry import DETECTORS
 from .config_edit import ConfigEditor,field_definitions,get_value,runtime_identity
 from .health import aggregate
 from .tracks import map_snapshot
+from .camera.manager import CameraUnavailable, CameraBusy
 
 
 def safe_url(value: str) -> str:
@@ -45,6 +46,29 @@ def create_app(service: Service, *, background: bool = True) -> FastAPI:
         nonce,_,signature=value.partition('.')
         if len(nonce)!=64 or len(signature)!=64 or any(c not in '0123456789abcdef' for c in nonce+signature):return False
         return hmac.compare_digest(signature,hmac.new(csrf_secret,nonce.encode(),hashlib.sha256).hexdigest())
+
+    async def protected_json(request, cookie):
+        expected = f'{request.url.scheme}://{request.url.netloc}'
+        token = request.headers.get('x-csrf-token', '')
+        if (request.headers.get('origin') != expected or
+                request.headers.get('sec-fetch-site', 'same-origin') != 'same-origin' or
+                not valid_csrf(token) or
+                not hmac.compare_digest(token.encode(), request.cookies.get(cookie, '').encode())):
+            raise HTTPException(403, 'Same-origin request and valid CSRF token required')
+        if request.headers.get('content-type', '').split(';')[0] != 'application/json':
+            raise HTTPException(415, 'JSON required')
+        raw = bytearray()
+        async for chunk in request.stream():
+            if len(raw) + len(chunk) > 32768:
+                raise HTTPException(413, 'Configuration request too large')
+            raw.extend(chunk)
+        try:
+            payload = json.loads(raw)
+            if not isinstance(payload, dict):
+                raise ValueError('Expected JSON object')
+            return payload
+        except (ValueError, UnicodeError):
+            raise HTTPException(422, 'Invalid JSON request') from None
     def overall(now):
         try:return aggregate(config,service.detector_names,service.source_views(now),service.store.health_rows(),now)
         except Exception:return {'status':'red','label':'Action needed','summary':'Central health/database read failed','issues':['Central health/database read failed'],
@@ -76,6 +100,7 @@ def create_app(service: Service, *, background: bool = True) -> FastAPI:
             return
         with ServiceLock(config.data_dir):
             service.recover()
+            service.camera.start()
             stop = asyncio.Event()
             # Slow owns shared atmosphere even when only live detectors are enabled.
             lanes = ["slow", *sorted({service.lane(d) for d in service.detectors}-{"slow"}), "delivery"]
@@ -84,8 +109,11 @@ def create_app(service: Service, *, background: bool = True) -> FastAPI:
                 yield
             finally:
                 stop.set()
-                await asyncio.gather(*tasks)
-                service.close()
+                try:
+                    await asyncio.to_thread(service.camera.close)
+                    await asyncio.gather(*tasks)
+                finally:
+                    service.close()
 
     app = FastAPI(title="All Sky Alert", lifespan=lifespan, docs_url=None, redoc_url=None)
     app.add_middleware(ExactHostMiddleware, allowed_hosts=config.values["service"]["allowed_hosts"])
@@ -186,7 +214,7 @@ def create_app(service: Service, *, background: bool = True) -> FastAPI:
     def health():
         now=service.clock()
         status=overall(now)
-        try:return {"overall":status,"components":service.store.health_rows(),"sources":service.source_views(now)}
+        try:return {"overall":status,"components":service.store.health_rows(),"sources":service.source_views(now),"camera":service.camera.snapshot()}
         except Exception:return JSONResponse({'overall':status,'components':[],'sources':[]},status_code=503)
 
     @app.get('/aircraft')
@@ -218,18 +246,8 @@ def create_app(service: Service, *, background: bool = True) -> FastAPI:
 
     @app.post('/settings')
     async def save_settings(request:Request):
-        origin=request.headers.get('origin')
-        expected=f'{request.url.scheme}://{request.url.netloc}'
-        token=request.headers.get('x-csrf-token','')
-        if origin!=expected or request.headers.get('sec-fetch-site','same-origin')!='same-origin' or not valid_csrf(token) or not hmac.compare_digest(token.encode(),request.cookies.get('asa_csrf','').encode()):
-            raise HTTPException(403,'Same-origin request and valid CSRF token required')
-        if request.headers.get('content-type','').split(';')[0]!='application/json':raise HTTPException(415,'JSON required')
-        raw=bytearray()
-        async for chunk in request.stream():
-            if len(raw)+len(chunk)>32768:raise HTTPException(413,'Configuration request too large')
-            raw.extend(chunk)
+        payload = await protected_json(request, 'asa_csrf')
         try:
-            payload=json.loads(raw)
             if not isinstance(payload,dict) or set(payload)!={'revision','changes'} or not isinstance(payload['revision'],str):raise ValueError('Invalid settings request')
             _,changed=editor.save(payload['changes'],payload['revision'])
         except RuntimeError:raise HTTPException(409,'Configuration changed; reload Settings') from None
@@ -237,5 +255,89 @@ def create_app(service: Service, *, background: bool = True) -> FastAPI:
         except OSError:raise HTTPException(503,'Atomic configuration save failed; check file permissions') from None
         service.store.health('configuration','restart_required',service.clock(),'Saved operational keys: '+', '.join(changed))
         return {'status':'saved','restart_required':True,'changed':changed,'message':'Saved — restart required. Running settings are unchanged.'}
+
+    @app.get('/camera')
+    def camera_page(request: Request):
+        token = csrf_token()
+        try:
+            disk, revision, _ = editor.read()
+            saved = disk.values['camera']['timelapse']
+        except (ValueError, OSError):
+            revision, saved = None, config.values['camera']['timelapse']
+        response = templates.TemplateResponse(request=request, name='camera.html', context=context(request,
+            csrf=token, camera=service.camera.snapshot(), revision=revision, saved=saved))
+        response.set_cookie('asa_camera_csrf', token, httponly=True, samesite='strict',
+                            secure=request.url.scheme == 'https', path='/camera', max_age=3600)
+        return response
+
+    @app.get('/camera/status')
+    def camera_status():
+        return service.camera.snapshot()
+
+    @app.get('/camera/latest')
+    def camera_latest():
+        with service.camera.lock:
+            path = service.camera.latest_path
+        if path is None or not path.is_file():
+            raise HTTPException(404, 'No image captured during this service run')
+        return FileResponse(path, media_type='image/jpeg', filename=path.name)
+
+    @app.get('/camera/stream')
+    async def camera_stream(request: Request):
+        try:
+            service.camera.subscribe()
+        except CameraUnavailable as exc:
+            raise HTTPException(503, str(exc)) from None
+        except CameraBusy as exc:
+            raise HTTPException(429, str(exc)) from None
+        async def frames():
+            previous = -1
+            try:
+                while not service.camera.stop_event.is_set() and not await request.is_disconnected():
+                    with service.camera.lock:
+                        if service.camera.state['state'] not in {'ready', 'capturing'}:
+                            break
+                    previous, frame = service.camera.preview_frame(previous)
+                    if frame:
+                        yield (b'--frame\r\nContent-Type: image/jpeg\r\nContent-Length: ' +
+                               str(len(frame)).encode() + b'\r\n\r\n' + frame + b'\r\n')
+                    await asyncio.sleep(1 / service.camera.settings['preview_fps'])
+            finally:
+                service.camera.unsubscribe()
+        return StreamingResponse(frames(), media_type='multipart/x-mixed-replace; boundary=frame')
+
+    @app.post('/camera/command')
+    async def camera_command(request: Request):
+        payload = await protected_json(request, 'asa_camera_csrf')
+        action = payload.get('action')
+        try:
+            if action == 'capture' and set(payload) == {'action'}:
+                key = service.camera.submit('capture')
+            elif action == 'focus' and set(payload) <= {'action', 'mode', 'lens_position', 'trigger'} and 'mode' in payload:
+                key = service.camera.submit('focus', mode=payload['mode'],
+                    lens_position=payload.get('lens_position'), trigger=payload.get('trigger', False))
+            elif action == 'timelapse' and set(payload) == {'action', 'running', 'interval_seconds'}:
+                service.camera.set_timelapse(payload['running'], payload['interval_seconds'])
+                return {'status': 'applied', 'message': 'Timelapse running state updated. An in-flight capture may finish; startup defaults are unchanged.'}
+            elif action == 'save_timelapse' and set(payload) == {'action', 'enabled', 'interval_seconds', 'revision'} and isinstance(payload['revision'], str):
+                _, changed = editor.save({'camera.timelapse.enabled': payload['enabled'],
+                    'camera.timelapse.interval_seconds': payload['interval_seconds']}, payload['revision'])
+                _, revision, _ = editor.read()
+                service.store.health('configuration', 'restart_required', service.clock(), 'Saved operational keys: ' + ', '.join(changed))
+                return {'status': 'saved', 'revision': revision, 'restart_required': True,
+                        'message': 'Saved startup defaults — restart required. Use Start/Stop for this session.'}
+            else:
+                raise ValueError('Invalid camera command')
+        except CameraUnavailable as exc:
+            raise HTTPException(503, str(exc)) from None
+        except CameraBusy as exc:
+            raise HTTPException(429, str(exc)) from None
+        except RuntimeError:
+            raise HTTPException(409, 'Configuration changed; reload Camera before saving') from None
+        except (ValueError, TypeError, KeyError, OverflowError):
+            raise HTTPException(422, 'Invalid or unsupported camera setting; interval must be 10–604800 seconds') from None
+        except OSError:
+            raise HTTPException(503, 'Atomic configuration save failed; check directory permissions') from None
+        return JSONResponse({'status': 'queued', 'id': key}, status_code=202)
 
     return app

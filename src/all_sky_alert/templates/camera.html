@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block scripts %}<script src="{{ url_for('static', path='camera.js') }}" defer></script>{% endblock %}
+{% block content %}
+<h1>General Pi Camera / Timelapse</h1>
+<p>Camera Module 3 viewing and still capture. The future ZWO All-Sky Camera is a separate feature.</p>
+<div id="camera-controls" data-csrf="{{ csrf }}" data-revision="{{ revision or '' }}" data-timezone="{{ timezone }}">
+<section class="card"><h2>Live view</h2>
+<p>Low-rate preview pauses during full-resolution capture. Preview encoding stops when nobody is viewing.</p>
+<button id="preview-start" type="button">Show live view</button> <button id="preview-stop" type="button">Hide live view</button>
+<img id="camera-preview" class="camera-preview" alt="Live Pi camera preview" hidden>
+<p id="preview-message" role="status"></p></section>
+<section class="card"><h2>Camera status</h2><dl id="camera-status"></dl><p id="camera-error" class="safety" role="status"></p></section>
+<section class="card"><h2>Focus and still capture</h2>
+<label class="control">Autofocus mode <select id="focus-mode" disabled><option>Unavailable</option></select></label>
+<button id="focus-apply" type="button" disabled>Apply focus mode</button>
+<button id="autofocus" type="button" disabled>Trigger autofocus</button>
+<label class="control">Manual lens position (dioptres) <input id="lens-position" type="number" step="any" disabled></label>
+<p id="focus-support" class="muted">Checking supported camera controls…</p>
+<button id="capture" type="button" disabled>Capture Image</button>
+<a id="latest-image" href="/camera/latest" hidden>Download latest captured image</a></section>
+<section class="card"><h2>Timelapse</h2>
+<label class="control">Capture interval <input id="capture-interval" type="number" step="any" min="0.01" value="{{ camera.interval_seconds }}" required>
+<select id="interval-unit"><option value="1">seconds</option><option value="60">minutes</option><option value="3600">hours</option></select></label>
+<p>Minimum 10 seconds; maximum 7 days. Next capture is scheduled after the previous capture finishes. Missed frames are skipped.</p>
+<button id="timelapse-start" type="button" disabled>Start timelapse</button> <button id="timelapse-stop" type="button">Stop timelapse</button>
+<label class="control"><input id="startup-timelapse" type="checkbox" {% if saved.enabled %}checked{% endif %}>Start timelapse on service startup</label>
+<button id="timelapse-save" type="button" {% if not revision %}disabled{% endif %}>Save startup defaults — restart required</button>
+<p class="muted">Saved interval: {{ saved.interval_seconds }} seconds. Start/Stop affects this session. Saved configuration takes effect on restart. Camera enablement and preview sizes are in <a href="/settings">Settings</a>; capture paths are edited locally.</p></section>
+<p id="camera-result" role="status" aria-live="polite"></p>
+</div><noscript>JavaScript is required for camera controls and status polling.</noscript>
+{% endblock %}

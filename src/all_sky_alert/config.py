@@ -10,6 +10,7 @@ from .domain import Observer, bounded
 from .registry import DETECTORS
 from .sources import SOURCES
 from .network import validate_network
+from .camera.settings import DEFAULTS as CAMERA_DEFAULTS, validate as validate_camera
 
 
 DEFAULTS = {
@@ -33,6 +34,7 @@ DEFAULTS["map"] = {"enabled": True, "tiles_enabled": True,
                    "tile_url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                    "tile_attribution": "OpenStreetMap contributors",
                    "radius_km": 40, "track_minutes": 10, "max_aircraft": 150, "max_points": 80}
+DEFAULTS["camera"] = CAMERA_DEFAULTS
 
 
 def merge(default: dict, supplied: dict, path: str = "") -> dict:
@@ -88,6 +90,7 @@ def from_dict(raw, base, file_path=None):
     ZoneInfo(observer["timezone"])
     obs = Observer(**{"elevation_m": 0, **observer})
     values = merge(DEFAULTS, raw)
+    validate_camera(values["camera"], base, values["service"]["data_dir"])
     service, atmosphere = values["service"], values["atmosphere"]
     for key, lo, hi in (("interval_seconds", 30, 86400), ("recent_hours", 0.1, 720),
                         ("prediction_days", 1, 365), ("retention_days", 1, 3650)):

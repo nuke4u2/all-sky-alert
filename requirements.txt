@@ -1,0 +1,6 @@
+# Runtime dependency declarations come ONLY from pyproject.toml.
+# Tested pins come from constraints.txt; constraints never install extras themselves.
+# On Raspberry Pi OS use the system Python venv with --system-site-packages.
+# Picamera2/libcamera/NumPy are supplied by apt, not by a pip camera extra.
+-c constraints.txt
+.
