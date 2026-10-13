@@ -1,4 +1,4 @@
-"""Private fixture-only mobile/LAN QA. Requires the qa extra and installed Edge.
+"""Private fixture-only mobile/LAN QA. Requires the qa extra and a browser.
 
 No production data, credentials, upstream requests or mail. Optional --lan-host
 tests this computer's private IPv4 interface without changing firewall settings.
@@ -9,6 +9,7 @@ from copy import deepcopy
 from dataclasses import asdict, replace
 from datetime import timedelta
 import json
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Thread
@@ -44,6 +45,7 @@ class SharedFixture:
 
 def main():
     parser=ArgumentParser();parser.add_argument('--lan-host');parser.add_argument('--port',type=int,default=8021)
+    parser.add_argument('--channel',default='msedge' if os.name=='nt' else None)
     args=parser.parse_args()
     if args.lan_host and not local_address(args.lan_host):parser.error('Private LAN IP required')
     output=Path('test-artifacts/phase4-browser');output.mkdir(parents=True,exist_ok=True)
@@ -124,7 +126,7 @@ def main():
                     assert report['lan_status']==200
                 assert probe.get(base+'/',headers={'Host':'attacker.invalid'}).status_code==400
             with sync_playwright() as playwright:
-                browser=playwright.chromium.launch(channel='msedge',headless=True)
+                browser=playwright.chromium.launch(channel=args.channel,headless=True)
                 context=browser.new_context()
                 context.route('**/*',lambda route:route.continue_() if route.request.url.startswith(base) else route.abort())
                 page=context.new_page();errors=[]

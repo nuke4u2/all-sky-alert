@@ -11,6 +11,7 @@ dependencies = [
   "astronomy-engine>=2.1.19,<3", "fastapi>=0.115,<1", "uvicorn>=0.30,<1",
   "jinja2>=3.1,<4", "httpx>=0.27,<1", "tzdata>=2025.1",
   "skyfield>=1.55,<2", "sgp4>=2.27,<3", "skyfield-data>=7,<8",
+  "numpy>=1.26,<3",
   "tomlkit>=0.13,<1",
 ]
 

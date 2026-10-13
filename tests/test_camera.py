@@ -407,3 +407,29 @@ def test_unsupported_focus_controls_backend(config):
         assert info['capabilities'] == {'focus_modes': [], 'autofocus_trigger': False, 'lens_limits': None}
         with pytest.raises(ValueError): backend.focus('Auto')
     finally: backend.close()
+
+
+def test_closed_manager_does_not_open_hardware(config):
+    config.values['camera']['enabled'] = True
+    backend = FakeBackend()
+    manager = CameraManager(config, backend_factory=lambda: backend)
+    manager.close()
+    manager.start()
+    assert manager.thread is None and not backend.calls
+
+
+def test_failed_preview_restoration_marks_camera_fault(config, tmp_path):
+    camera = MockPicamera(0)
+    controls = SimpleNamespace(AfModeEnum=AfMode, AfTriggerEnum=SimpleNamespace(Start=0))
+    backend = RaspberryPiCameraBackend(camera_factory=lambda _: camera, controls=controls)
+    backend.open(config.values['camera'])
+    original = camera.configure
+    def failed_restore(value):
+        if value['type'] == 'preview':
+            raise RuntimeError('device stopped responding')
+        return original(value)
+    camera.configure = failed_restore
+    try:
+        with pytest.raises(CameraFault): backend.capture(tmp_path / 'capture.jpg')
+        assert backend.failed
+    finally: backend.close()

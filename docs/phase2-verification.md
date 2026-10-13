@@ -1,5 +1,8 @@
 # Phase 2 implementation and verification
 
+Historical Windows/container evidence; these commands are not the current Pi
+installation path. See [README](../README.md) and [re-audit](pi-reaudit.md).
+
 Completed 2026-10-08 America/New_York (checks after midnight UTC are dated October 9).
 Read [source research](source-capabilities.md), [extension design](phase2-architecture.md)
 and [architecture](architecture.md) for contracts and authoritative links.

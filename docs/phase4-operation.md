@@ -8,28 +8,22 @@ Timelapse operation and the systemd procedure are in the Pi guide.
 
 ## LAN access
 
-Current Windows development configuration binds `0.0.0.0:8008`, accepts trusted
-private clients and exact hosts `localhost`, `127.0.0.1`, `::1`, `192.168.1.40`
-and `weissbier`. Open http://127.0.0.1:8008/ locally or
-http://192.168.1.40:8008/ from the same home LAN. The hostname may also resolve as
-http://weissbier:8008/; hostname resolution was not verified on another device.
-The selected IP belongs to Ethernet, not the WSL virtual interface.
+Native Pi operation uses `http://allsky-pi4.local:8008/` after explicit LAN
+configuration. For Windows-only development commands and private-firewall notes,
+see [Windows development](windows-development.md).
 
-```powershell
-Set-Location E:\AI\AgentProjects\all-sky-alert
-.venv\Scripts\python.exe -m pip install -c constraints.txt -e ".[dev,hrrr]"
-.venv\Scripts\python.exe -m all_sky_alert --config config.toml serve
+```bash
+cd ~/projects/all-sky-alert
+.venv/bin/python -m all_sky_alert --config config.toml serve
 ```
 
 Stop with Ctrl+C before restarting or running configuration maintenance. Do not
-overwrite an existing config with the example. `ipconfig` shows your current IPv4
-address. Reserve it in your router or update `service.allowed_hosts` when it changes.
-Binding/host configuration is edited locally, not through Settings. No firewall,
-router forwarding or public exposure was enabled by this development task. If a
-phone cannot connect, allow the chosen Python/service port on Windows's **Private**
-network profile with **LocalSubnet** scope only, and check Wi-Fi client isolation.
-Do not disable the firewall. A connection from this PC through its LAN interface
-does not prove another device's firewall/Wi-Fi route.
+overwrite an existing config with the example. `hostname -I` shows the Pi's LAN
+addresses. Reserve the intended address or update exact allowed hosts when it
+changes. Binding/host configuration is edited locally, not through Settings.
+No router forwarding/public exposure is needed. Check any local LAN firewall and
+Wi-Fi client isolation; do not disable the firewall. A self-request through the
+Pi's address does not prove another client's route to it.
 
 The example remains localhost-only. To opt it into a home LAN:
 
@@ -106,8 +100,8 @@ browser. CSRF is not authentication.
 For future schema additions, stop the service, back up your configuration privately,
 then run:
 
-```powershell
-.venv\Scripts\python.exe -m all_sky_alert --config config.toml config-sync
+```bash
+.venv/bin/python -m all_sky_alert --config config.toml config-sync
 ```
 
 It adds missing validated defaults, preserving existing values, observer fields,

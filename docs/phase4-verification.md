@@ -1,5 +1,8 @@
 # Phase 4 verification — 2026-10-10
 
+Historical Windows/container evidence; these commands are not the current Pi
+installation path. See [README](../README.md) and [re-audit](pi-reaudit.md).
+
 Baseline inspection found seven real detector families, shared Open-Meteo/ECCC,
 SQLite revisions/outbox/aircraft episodes, separate worker lanes, and Gmail OAuth.
 There was no map, editable Settings, aggregate stoplight, ice-optics detector or

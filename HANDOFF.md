@@ -55,8 +55,10 @@ does not authorize live smoke tests, secrets, paid services or architecture chan
 
 ## Required verification
 - <targeted offline tests and meaningful failure cases>
-- .venv\Scripts\python.exe -m pytest
-- .venv\Scripts\python.exe -m compileall -q src tests
+- Linux: .venv/bin/python -m pytest
+- Linux: .venv/bin/python -m compileall -q src tests
+- Windows development: .venv\Scripts\python.exe -m pytest
+- Windows development: .venv\Scripts\python.exe -m compileall -q src tests
 
 ## Sources and context
 - <specific docs, source URLs, fixture definitions, prior decisions>

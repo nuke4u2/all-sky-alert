@@ -1,5 +1,9 @@
 # Raspberry Pi migration verification, 2026-10-11
 
+This is the previous pass, retained as historical Windows evidence. The fresh
+[2026-10-12 audit](pi-reaudit.md) supersedes its deployment-readiness conclusions.
+Native Pi installation/hardware acceptance is still pending.
+
 Implementation and offline validation were performed on the existing **Windows /
 Python 3.12** development workspace. Repository status was clean before editing.
 No commits, pushes, additional agents, production config, secrets, OAuth files,

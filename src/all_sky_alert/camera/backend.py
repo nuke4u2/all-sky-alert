@@ -61,9 +61,11 @@ class RaspberryPiCameraBackend:
         try:
             return self.camera.wait(job, timeout=15)
         except TimeoutError:
-            self.camera.cancel_all_and_flush()
             self.failed = True
-            raise CameraFault("Camera operation timed out; restart camera service") from None
+            try:
+                self.camera.cancel_all_and_flush()
+            finally:
+                raise CameraFault("Camera operation timed out; restart camera service") from None
 
     @staticmethod
     def _metadata(raw):
@@ -91,12 +93,16 @@ class RaspberryPiCameraBackend:
             camera.start(show_preview=False)
             return self._metadata(self._wait(camera.capture_file(str(path), format="jpeg", wait=False)))
         finally:
-            camera.stop()
-            if not self.failed:
-                camera.configure(self.preview_config)
-                if self.focus_controls:
-                    camera.set_controls(self.focus_controls)
-                camera.start(show_preview=False)
+            try:
+                camera.stop()
+                if not self.failed:
+                    camera.configure(self.preview_config)
+                    if self.focus_controls:
+                        camera.set_controls(self.focus_controls)
+                    camera.start(show_preview=False)
+            except Exception:
+                self.failed = True
+                raise CameraFault("Camera preview restoration failed; restart after inspecting hardware") from None
 
     def focus(self, mode, lens_position=None, trigger=False):
         if mode not in self.capabilities["focus_modes"]:

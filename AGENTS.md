@@ -39,8 +39,9 @@ architecture changes outside that scope.
   rewrite history or change architecture without explicit authorization.
 - Do not create git commits unless explicitly requested. Do not spawn additional
   agents unless the user explicitly authorizes them for the task.
-- Run `.venv\Scripts\python.exe -m pytest` and relevant targeted tests after core
-  changes. Tests block network; optional live evaluation requires explicit task
+- Run `.venv/bin/python -m pytest` and relevant targeted tests after core
+  changes on Linux; Windows development uses `.venv\Scripts\python.exe -m pytest`.
+  Tests block network; optional live evaluation requires explicit task
   scope. Do not add runtime LLM or automated agent orchestration dependencies.
 
 Composition is service.py plus registry.py (detector factories/defaults/validation).

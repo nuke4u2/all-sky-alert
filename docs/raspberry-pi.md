@@ -9,10 +9,10 @@ image analysis, meteor/aurora detection, stacking and plate solving are deferred
 
 ## Clean installation on allsky-pi4
 
-Run over SSH as the normal account that will own the service. First place the
-updated source tree at `~/projects/all-sky-alert`; exclude Windows `.venv`,
-runtime data, config and credentials from that source transfer. Do not copy a
-Windows virtual environment to Linux. These commands assume Raspberry Pi OS's
+The [README](../README.md) is the self-contained fresh-clone installation path.
+Run over SSH as the normal account that will own the service. The Pi checkout is
+`~/projects/all-sky-alert`; do not copy a Windows venv, production config, secrets
+or live data into a source transfer. These commands assume Raspberry Pi OS's
 configured Raspberry Pi package repositories, not generic Debian alone.
 
 ```bash
@@ -33,9 +33,13 @@ takes effect. Check `hostname` is `allsky-pi4`, `uname -m` is `aarch64`, and
 cd ~/projects/all-sky-alert
 python3 -m venv --system-site-packages .venv
 source .venv/bin/activate
-python -m pip install --upgrade pip
+python -m pip install --upgrade pip setuptools wheel
 python -m pip install -r requirements.txt
 python -m pip check
+which python
+python --version
+python -c "import all_sky_alert; print('All Sky Alert OK')"
+python -c "from picamera2 import Picamera2; print('Picamera2 OK')"
 python -c "import astronomy, fastapi, skyfield, sgp4, tomlkit, picamera2, libcamera, numpy; print('Imports OK; NumPy:', numpy.__version__, numpy.__file__)"
 ```
 
@@ -55,8 +59,9 @@ compiled Python for this venv.
 owns runtime requirements/extras and package data; `constraints.txt` supplies
 tested versions only for dependencies selected by the installer. There is no
 second handwritten runtime dependency list to drift. Dev/QA/Gmail/HRRR are not
-installed by the runtime requirements. No runtime Python package was added for
-the camera; its imports are lazy and Windows development remains supported.
+installed by the runtime requirements. NumPy is declared directly because orbit
+code imports it; the camera's imports remain lazy. Windows development remains
+supported separately in [its guide](windows-development.md).
 
 Linux ARM64 deliberately omits the existing NumPy 2.5.3 pin, allowing apt's NumPy
 to remain visible rather than shadowing a camera dependency with a pip wheel.
@@ -83,8 +88,9 @@ python -m pip install -c constraints.txt '.[hrrr]'
 ```
 
 Keep HRRR disabled for the initial Pi acceptance. Core packages are portable
-Python or published native-package dependencies; this Windows work session has
-not verified resolution of the full pinned set on Python 3.13/aarch64. No x86
+Python or published native-package dependencies; the 2026-10-12 Windows re-audit
+checked the core constrained graph's Python 3.13/aarch64 wheel metadata, but did
+not execute a native Pi install. No x86
 wheel URL or Windows-only requirement is introduced. ARM64 pip/wheel resolution
 and optional ecCodes remain target-machine acceptance checks; do not silently
 relax scientific dependencies if a build fails.
@@ -321,7 +327,7 @@ configuration, interval bounds, UTC unique filenames, monotonic schedule/missed
 frames, owner thread, preview bounds, start/stop, failed operations, resource
 release, full-resolution mode restoration and web security/persistence. Mocked
 web/backend integration is distinct from real Camera Module 3 hardware acceptance.
-See [Pi verification](pi-verification.md) for the measured local results and the
+See [current re-audit](pi-reaudit.md) for the measured local results and the
 explicit outstanding ARM64, hardware, browser and systemd checks.
 
 Future ZWO work should implement the small `CameraBackend` boundary and receive

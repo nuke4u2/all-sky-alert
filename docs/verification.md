@@ -1,5 +1,8 @@
 # Verification of the initial slice
 
+Historical Windows/container evidence. Current deployment instructions and
+pending Pi acceptance are in [README](../README.md) and [re-audit](pi-reaudit.md).
+
 Windows Python 3.12; dependency versions recorded in constraints.txt.
 
 - 47 offline tests pass. Network transports are blocked in normal tests; Gmail

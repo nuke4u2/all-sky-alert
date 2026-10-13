@@ -1,5 +1,8 @@
 # Phase 3 implementation and verification
 
+Historical Windows/container evidence; these commands are not the current Pi
+installation path. See [README](../README.md) and [re-audit](pi-reaudit.md).
+
 Completed against the Phase 2 workspace on 2026-10-09. Read the
 [design recorded before implementation](phase3-architecture.md),
 [source decisions and authoritative references](source-capabilities.md), and

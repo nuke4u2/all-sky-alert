@@ -4,6 +4,7 @@ import base64
 from copy import deepcopy
 from dataclasses import asdict
 import json
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Thread
@@ -45,7 +46,8 @@ class FixtureConditions:
 
 def main():
     parser = ArgumentParser(description=__doc__)
-    parser.add_argument('--channel', default='msedge', help='Installed Playwright browser channel')
+    parser.add_argument('--channel', default='msedge' if os.name == 'nt' else None,
+                        help='Installed browser channel; default Edge on Windows, Playwright Chromium elsewhere')
     parser.add_argument('--port', type=int, default=8023)
     args = parser.parse_args()
     output = Path('test-artifacts/pi-camera-browser')

@@ -45,7 +45,7 @@ class CameraManager:
 
     def start(self):
         with self.lock:
-            if not self.settings["enabled"] or self.thread is not None:
+            if not self.settings["enabled"] or self.thread is not None or self.stop_event.is_set():
                 return
             self.state["state"] = "starting"
             self.thread = Thread(target=self._run, name="camera-owner", daemon=True)
