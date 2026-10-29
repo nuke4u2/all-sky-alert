@@ -30,7 +30,8 @@ independent cache/backoff. Delivery and scheduled milestones have their own boun
 15-second loop, without rediscovering geometry. Aircraft refresh through focused
 JSON every 15 seconds; only the home page reloads every five minutes. Settings,
 map and detail pages retain their state. Stop with Ctrl+C. “Now” and “Upcoming” events
-are ordered by priority; recent history defaults to events ending in the previous
+default to event peak time, newest first; the filter form also offers interest,
+observing quality, event type and priority sorting. Recent history defaults to events ending in the previous
 two hours. Recent history fills naturally as the service runs: no fabricated past
 predictions are added on first launch. Detail pages expose reasons, atmospheric
 metrics, geometry, sources, alerts and recorded revisions. Eclipse details show

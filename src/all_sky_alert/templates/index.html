@@ -22,13 +22,16 @@
 {% endmacro %}
 {% block content %}
 <div class="intro"><p class="eyebrow">Your observing outlook</p><h1>What’s worth looking up for?</h1><p>Event importance and observing conditions, kept separate so the sky’s big moments stay visible.</p></div>
-<form method="get" class="filters" id="event-filters"><fieldset><legend>Active & upcoming event families</legend><input type="hidden" name="filter" value="1"><div class="choices">{% for name,spec in filter_choices.items() %}<label><input type="checkbox" name="types" value="{{ name }}" {% if name in selected_types %}checked{% endif %}>{{ spec.label or name }}</label>{% endfor %}</div><div class="actions"><button type="button" data-selection="all">All</button><button type="button" data-selection="none">None</button><button type="submit">Apply filters</button></div></fieldset></form>
+<form method="get" class="filters" id="event-filters"><fieldset><legend>Filter and sort predictions</legend><input type="hidden" name="filter" value="1">
+<label class="control numeric" for="prediction-sort">Sort by<select id="prediction-sort" name="sort">{% for value,label in sort_choices.items() %}<option value="{{ value }}" {% if value==sort_order %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+<p class="muted">Sorting applies to Now, Upcoming and Recent; family filters apply to Now and Upcoming. Chronological order uses the peak time shown on each card; unknown quality stays last.</p>
+<div class="choices">{% for name,spec in filter_choices.items() %}<label><input type="checkbox" name="types" value="{{ name }}" {% if name in selected_types %}checked{% endif %}>{{ spec.label or name }}</label>{% endfor %}</div><div class="actions"><button type="button" data-selection="all">All</button><button type="button" data-selection="none">None</button><button type="submit">Apply filters and sorting</button></div></fieldset></form>
 {% if map_enabled %}<p><a class="button" href="/aircraft">Open live aircraft map →</a></p>{% endif %}
 <h2>Now</h2><p class="muted">Active predicted windows. Aurora forecasts are model opportunities; they are not confirmed sightings.</p>
 {% if aircraft_enabled %}<section aria-label="Live aircraft"><h3>Aircraft now & approaching</h3><p class="muted" id="live-status">Loading fresh recorded positions; updates every 15 seconds.</p><div id="live-aircraft" class="cards" aria-live="polite"></div><noscript><p>Enable JavaScript for live aircraft updates, or open <a href="/api/live">live aircraft JSON</a>.</p></noscript></section>{% endif %}
 <p class="muted">Scores and confidence are heuristic ratings, not calibrated probabilities of a sighting.</p>
 {{ cards(active) }}
-<h2>Upcoming</h2><p class="muted">Ordered by interest and observing quality. Open an event for its full window and reasoning.</p>
+<h2>Upcoming</h2><p class="muted">{{ sort_label }}. Open an event for its full window and reasoning.</p>
 {{ cards(upcoming|rejectattr('candidate.detector', 'equalto', 'adsb')|list) }}
 <h2>Recent predictions</h2><p class="muted">Events that ended within the previous {{ recent_hours }} hours. History fills as the service runs.</p>
 {{ cards(recent) }}

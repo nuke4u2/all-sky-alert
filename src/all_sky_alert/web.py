@@ -26,6 +26,40 @@ from .tracks import map_snapshot
 from .camera.manager import CameraUnavailable, CameraBusy
 
 
+SORT_CHOICES = {
+    'time_desc': 'Event time: newest first',
+    'time_asc': 'Event time: oldest first',
+    'interest_desc': 'Interest: highest first',
+    'interest_asc': 'Interest: lowest first',
+    'quality_desc': 'Observing quality: highest first',
+    'quality_asc': 'Observing quality: lowest first',
+    'type': 'Event type: A–Z',
+    'priority_desc': 'Overall priority: highest first',
+}
+
+
+def sorted_predictions(rows, order):
+    # Presentation only: retain stable ties without mutating stored predictions.
+    chronological = lambda row: (parse(row['candidate']['peak']), row['candidate']['id'])
+    result = sorted(rows, key=chronological, reverse=order != 'time_asc')
+    if order.startswith('interest_'):
+        result.sort(key=lambda row: row['candidate']['interest'], reverse=order.endswith('_desc'))
+    elif order.startswith('quality_'):
+        def quality(row):
+            value = row['assessment']['quality']
+            return (value is None, -value if value is not None and order.endswith('_desc') else value or 0)
+        result.sort(key=quality) # Unknown quality stays last in either direction.
+    elif order == 'priority_desc':
+        result.sort(key=lambda row: row['priority'], reverse=True)
+    elif order == 'type':
+        def event_type(row):
+            event = row['candidate']
+            spec = DETECTORS.get(event['detector'])
+            return ((spec.label if spec and spec.label else event['detector']).casefold(), event['kind'].casefold())
+        result.sort(key=event_type)
+    return result
+
+
 def safe_url(value: str) -> str:
     try:
         parsed = urlparse(value)
@@ -77,6 +111,11 @@ def create_app(service: Service, *, background: bool = True) -> FastAPI:
         selected=request.query_params.getlist('types') if request.query_params.get('filter')=='1' else list(DETECTORS)
         if set(selected)-set(DETECTORS):raise HTTPException(422,'Unknown event filter')
         return selected
+
+    def sort_selection(request):
+        order=request.query_params.get('sort','time_desc')
+        if order not in SORT_CHOICES:raise HTTPException(422,'Unknown prediction sort order')
+        return order
 
     async def worker(stop: asyncio.Event, lane: str):
         while not stop.is_set():
@@ -145,8 +184,10 @@ def create_app(service: Service, *, background: bool = True) -> FastAPI:
     def index(request: Request):
         now = service.clock()
         selected=selection(request)
+        order=sort_selection(request)
         upcoming, recent = service.upcoming(now), service.recent(now)
-        upcoming=[p for p in upcoming if p['candidate']['detector'] in selected]
+        upcoming=sorted_predictions([p for p in upcoming if p['candidate']['detector'] in selected],order)
+        recent=sorted_predictions(recent,order)
         for prediction in upcoming + recent:
             validity = prediction["candidate"].get("valid_until")
             prediction["inputs_expired"] = bool(validity and now > parse(validity))
@@ -156,7 +197,8 @@ def create_app(service: Service, *, background: bool = True) -> FastAPI:
             upcoming=[p for p in upcoming if parse(p["candidate"]["start"]) > now],
             active=[p for p in upcoming if parse(p["candidate"]["start"]) <= now and p["candidate"]["detector"] != "adsb"],
             aircraft_enabled="adsb" in service.detector_names and 'adsb' in selected,
-            filter_choices=DETECTORS,selected_types=selected,digest_status=service.digest_status(now),
+            filter_choices=DETECTORS,selected_types=selected,sort_choices=SORT_CHOICES,sort_order=order,
+            sort_label=SORT_CHOICES[order],digest_status=service.digest_status(now),
             recent=recent, recent_hours=config.values["service"]["recent_hours"],
             inbox=service.store.inbox(config.observer.key), health=service.store.health_rows(), sources=service.source_views(now)))
 
@@ -173,15 +215,16 @@ def create_app(service: Service, *, background: bool = True) -> FastAPI:
     def predictions(request: Request):
         now = service.clock()
         selected=selection(request)
-        upcoming = [p for p in service.upcoming(now) if p['candidate']['detector'] in selected]
+        order=sort_selection(request)
+        upcoming = sorted_predictions([p for p in service.upcoming(now) if p['candidate']['detector'] in selected],order)
         # Keep the existing upcoming API inclusive of active windows.
         return {"upcoming": upcoming, "active": [p for p in upcoming if parse(p["candidate"]["start"]) <= now and
-            (p["candidate"]["detector"] != "adsb" or not p["candidate"].get("valid_until") or now <= parse(p["candidate"]["valid_until"]))], "recent": service.recent(now)}
+            (p["candidate"]["detector"] != "adsb" or not p["candidate"].get("valid_until") or now <= parse(p["candidate"]["valid_until"]))], "recent": sorted_predictions(service.recent(now),order)}
 
     @app.get("/api/live")
-    def live():
+    def live(request:Request):
         now = service.clock()
-        rows = service.store.predictions(config.observer.key,["adsb"] if "adsb" in service.detector_names else [],now,2)
+        rows = sorted_predictions(service.store.predictions(config.observer.key,["adsb"] if "adsb" in service.detector_names else [],now,2),sort_selection(request))
         aircraft = []
         for p in rows:
             e = p["candidate"]

@@ -10,6 +10,7 @@ from dataclasses import asdict, replace
 from datetime import timedelta
 import json
 import os
+import re
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Thread
@@ -145,10 +146,16 @@ def main():
                             page.screenshot(path=str(output/(endpoint.strip('/').replace('/','-') or 'home'))+'.png',full_page=True)
                 page.set_viewport_size({'width':390,'height':900})
                 page.goto(base+'/',wait_until='networkidle')
+                assert page.locator('#prediction-sort').input_value()=='time_desc'
                 page.locator('[data-selection=none]').click();page.locator('button[type=submit]').click()
-                page.wait_for_url('**/?filter=1');page.reload();assert not page.locator('[name=types]:checked').count()
+                page.wait_for_url(re.compile(r'\?filter=1(?:&|$)'));page.reload();assert not page.locator('[name=types]:checked').count()
                 page.locator('[name=types][value=planetary]').check();page.locator('[name=types][value=sky_crystals]').check()
                 page.locator('button[type=submit]').click();assert 'types=planetary' in page.url and 'types=sky_crystals' in page.url
+                page.locator('#prediction-sort').select_option('interest_desc')
+                page.locator('button[type=submit]').click();page.reload()
+                assert page.locator('#prediction-sort').input_value()=='interest_desc' and 'sort=interest_desc' in page.url
+                assert page.locator('[name=types]:checked').count()==2
+                report['sort_selection_and_filter_persistence']=True
                 report['filter_refresh_and_multi_select']=True
                 page.goto(base+'/aircraft',wait_until='networkidle');page.wait_for_selector('#aircraft-list button')
                 page.locator('#aircraft-list button').first.click()

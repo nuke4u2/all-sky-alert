@@ -23,6 +23,9 @@ the previous camera implementation or these instructions as hardware acceptance.
   unknown inputs never mean clear skies, and stale scientific inputs cannot alert.
 - Durable predictions/history, unique alert milestones, optional Gmail, source
   health and validated Settings. Routine web reads acquire no upstream data.
+- Prediction lists default to event peak time, newest first. The filter form also
+  supports oldest first, interest, observing quality, event type and overall
+  priority; selection persists in the URL. Unknown quality remains last.
 - Gmail has independent high-interest immediate alerts, a daily local-day digest
   and a weekly long-range look-ahead, with durable period deduplication and safe
   read-only previews. See [notification modes](docs/gmail-modes.md).
