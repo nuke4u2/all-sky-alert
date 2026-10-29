@@ -83,3 +83,9 @@ external tiles are disabled. Live HRRR probes require explicit task scope and mu
 honor byte/run limits. Never supply production OAuth or database access to a local
 agent. A bounded task cannot change LAN/proxy trust, notification identity or
 scientific freshness contracts without Codex/Astra review.
+
+Notification work also reads `docs/gmail-modes.md`. Preserve separate immediate
+milestone/daily/weekly identities, DST/catch-up behavior and UNKNOWN semantics.
+Use fake adapters; do not read production predictions for a bounded handoff unless
+the task explicitly authorizes it. Previews must not initialize Service, migrate
+the database, acquire data or access OAuth credentials.

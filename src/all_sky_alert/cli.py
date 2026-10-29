@@ -36,6 +36,13 @@ def main():
     commands.add_parser("gmail-authorize", help="Interactive Gmail OAuth setup; sends no mail")
     test = commands.add_parser("test-email", help="Preview a test email; requires --send for delivery")
     test.add_argument("--send", action="store_true", help="Actually send to the configured recipient")
+    for command in ('preview-daily-digest','preview-weekly-digest'):
+        preview=commands.add_parser(command,help='Read-only persisted prediction preview; no evaluation, migration, credentials or sending')
+        preview.add_argument('--date',help='Observer-local reference YYYY-MM-DD; default today')
+        preview.add_argument('--format',choices=('text','eml'),default='text')
+    digest_retry=commands.add_parser('retry-digest',help='Requeue one failed/unknown unexpired digest; stop service first')
+    digest_retry.add_argument('id')
+    digest_retry.add_argument('--acknowledge-possible-duplicate',action='store_true')
     retry = commands.add_parser("retry-delivery", help="Requeue one failed/uncertain email delivery")
     retry.add_argument("id", type=int)
     retry.add_argument("--acknowledge-possible-duplicate", action="store_true")
@@ -43,6 +50,25 @@ def main():
     try:
         config = load(args.config)
         gmail = config.values["gmail"]
+        if args.command.startswith('preview-'):
+            from datetime import date
+            from zoneinfo import ZoneInfo
+            from .digests import build,slot
+            from .storage import Store
+            now=utcnow()
+            day=date.fromisoformat(args.date) if args.date else now.astimezone(ZoneInfo(config.observer.timezone)).date()
+            mode='daily_digest' if args.command=='preview-daily-digest' else 'weekly_digest'
+            if mode=='weekly_digest' and not args.date:
+                day,_,expiry=slot(config,mode,now)
+                if now>=expiry:
+                    from datetime import timedelta
+                    day+=timedelta(days=7)
+            payload=build(config,Store.open_readonly(config.data_dir/'all-sky-alert.sqlite3'),mode,day,now)
+            message=render_message(payload,gmail['destination'] or 'configure-recipient@example.invalid')
+            if args.format=='eml':print(message.as_string())
+            else:print(str(message['Subject'])+'\n\n'+message.get_content())
+            print('Preview only: no evaluation, schema update, credentials or email sending.')
+            return
         if args.command=='config-sync':
             from .config_edit import ConfigEditor
             ConfigEditor(config.file_path).sync()
@@ -115,6 +141,12 @@ def main():
                     print("Initialized detectors: " + ', '.join(service.detector_names))
                     print("Initialized domain providers: " + ', '.join(service.sources))
                     print("No provider acquisition, prediction evaluation, mail or camera open performed.")
+                elif args.command == 'retry-digest':
+                    if not args.acknowledge_possible_duplicate:
+                        raise ValueError('Explicit --acknowledge-possible-duplicate is required')
+                    if not service.store.retry_digest(args.id,config.observer.key,utcnow()):
+                        raise ValueError('No failed/unknown unexpired digest for this observer and ID')
+                    print('Digest queued; delivery lane will recheck current settings, predictions and expiry.')
                 elif args.command == "retry-delivery":
                     if not args.acknowledge_possible_duplicate:
                         raise ValueError("Explicit --acknowledge-possible-duplicate is required")

@@ -217,7 +217,7 @@ def test_additive_schema_one_migration_preserves_predictions(config, store, cond
         assert migrated.detail(event.id,config.observer.key)==before
         assert migrated.source_health_rows()==[]
         with migrated.connection() as db:
-            assert db.execute("PRAGMA user_version").fetchone()[0]==3
+            assert db.execute("PRAGMA user_version").fetchone()[0]==4
     finally:
         service.close()
 

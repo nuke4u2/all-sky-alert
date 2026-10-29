@@ -32,6 +32,7 @@
 {{ cards(upcoming|rejectattr('candidate.detector', 'equalto', 'adsb')|list) }}
 <h2>Recent predictions</h2><p class="muted">Events that ended within the previous {{ recent_hours }} hours. History fills as the service runs.</p>
 {{ cards(recent) }}
+{% include 'digest_status.html' %}
 {% if inbox %}<details><summary>Recent alerts · {{ inbox|length }}</summary><ul>{% for alert in inbox %}<li><a href="/events/{{ alert.event_id }}">{{ alert.prediction.candidate.title }}</a> · {{ alert.stage }} · {{ alert.created_at|localtime }}</li>{% endfor %}</ul></details>{% endif %}
 <details open id="source-health"><summary>Sources & service health</summary>
 {% if overall.issues %}<ul>{% for issue in overall.issues %}<li>{{ issue }}</li>{% endfor %}</ul>{% endif %}

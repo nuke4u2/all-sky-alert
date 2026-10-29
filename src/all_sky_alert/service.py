@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import asdict, replace
-from datetime import datetime
+from datetime import datetime, timedelta
 from threading import Lock
 
 import httpx
@@ -234,7 +234,8 @@ class Service:
     def _dispatch(self, now):
         self.refresh_milestones(now)
         # Bounded delivery work per cycle; one adapter cannot starve predictions.
-        deadline = time.monotonic() + 30
+        started = time.monotonic()
+        deadline = started + 30
         for _ in range(5):
             if time.monotonic() >= deadline:
                 break
@@ -268,6 +269,14 @@ class Service:
                 self.store.delivery_result(job["id"], "UNKNOWN", now, job["attempts"], error)
                 self.store.health(f"delivery:{job['adapter']}", "unknown", now, error)
 
+        from .digests import dispatch as dispatch_digests
+        dispatch_digests(self.config,self.store,self.adapters.get('gmail'),now,
+            clock=lambda:now+timedelta(seconds=time.monotonic()-started),deadline=deadline)
+
+    def digest_status(self,now):
+        from .digests import status
+        return status(self.config,self.store,now)
+
     def refresh_milestones(self, now):
         """Cheap clock/policy work; scheduled contacts need no rediscovery or HTTP."""
         for payload in self.store.scheduled(self.config.observer.key,self.detector_names,now):
@@ -295,9 +304,9 @@ class Service:
             now if now is not None else self.clock(), self.config.values["service"]["recent_hours"])
 
     def delivery_adapters(self,event):
-        selected=self.config.values['gmail']['event_types']
+        from .mail_policy import immediate_allowed
         return [name for name in self.adapters if name!='gmail' or
-                (self.config.values['gmail']['enabled'] and ('*' in selected or event.detector in selected))]
+                immediate_allowed(self.config.values['gmail'],event)]
 
     def recent(self, now=None):
         return self.store.predictions(self.config.observer.key, self.detector_names,

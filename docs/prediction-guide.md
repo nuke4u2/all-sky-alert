@@ -277,12 +277,19 @@ This deliberate nightly cap avoids model-refresh notification storms; separate
 bursts within a night do not get independent alerts yet.
 `notifications.enabled=false` stops new
 alerts and email dispatch; predictions remain visible. `gmail.enabled=false`
-disables just email. `gmail.event_types=["*"]` selects all registered current and
-future detector families; an explicit list such as `["eclipses", "iss_transits"]`
-excludes other and future families; `[]` selects none. Settings provides these
-choices. Routing never changes detectors, predictions or local milestones, and
-enabling a category does not replay historical alerts. Pending mail for newly
-excluded categories is canceled on restart. UI alert records are the channel-independent deduplication
+disables just email. Independent `gmail.immediate.event_types`,
+`gmail.daily_digest.event_types` and `gmail.weekly_digest.event_types` select
+registry families (`["*"]` includes future eligible families, explicit lists
+exclude future families, `[]` selects none). Legacy `gmail.event_types` migrates
+into unspecified per-mode choices. Immediate email also requires interest >=85
+by default, without changing local milestones. Daily/weekly jobs have separate
+durable calendar identities; their inclusion does not consume an imminent alert.
+See [current Gmail modes](gmail-modes.md) for schedules, horizon capability,
+previews, catch-up and retry policy. Settings provides these choices. Routing
+never changes detectors or predictions, and enabling a category does not replay
+historical event milestones. Pending immediate mail for newly excluded categories
+is canceled at delivery; digest retries reselect current eligible content.
+UI alert records are the channel-independent deduplication
 ledger. Enabling Gmail later affects new milestones rather than replaying old ones.
 
 ## Gmail OAuth (optional)

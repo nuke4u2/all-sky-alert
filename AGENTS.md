@@ -69,6 +69,14 @@ JSON, exact same-origin CSRF, revision guard and atomic directory-level replace.
 Saved config requires restart. Stop before CLI/manual config maintenance. Do not
 edit actual config in a bounded handoff without explicit task authorization.
 Gmail routing derives from registry families; historic milestones never replay.
+Gmail modes: immediate interest floor composes with existing event policy; digest
+inclusion never consumes an event milestone. Schema 4's observer/mode/local-period
+outbox uses atomic claims, bounded catch-up and UNKNOWN on ambiguous/interrupted
+sends. Calendar schedules use observer timezone with explicit DST resolution.
+Digests query existing predictions, never acquire data or force detector work.
+Only declared long-range geometry can appear in weekly mail; missing weather is
+unknown and short-range sources must never be extrapolated to fill the report.
+Preview commands use read-only SQLite, without Service/OAuth/schema initialization.
 Optics are uncalibrated opportunities. Preserve crystal/geometry/obstruction
 separation. HRRR has numeric-parameter/units/run/level checks, byte budgets and
 immutable extracted-run caching. NCCICE is per kg, not per cubic metre. Never

@@ -27,12 +27,15 @@ class DetectorRegistration:
     optional_dependencies: tuple[str, ...] = () # Refreshed/injected, failure cannot gate detection.
     label: str = ""
     conditions: bool = False
+    # Name of this detector's calendar-day geometry horizon setting. No summary
+    # may extend it or assume weather/live forecasts have long-range validity.
+    long_range_horizon: str | None = None
 
 
 DETECTORS = {
     "planetary": DetectorRegistration(PlanetaryDetector, PlanetaryDetector.defaults, PlanetaryDetector.validate_settings, profiles=("planetary",)),
     "sunset": DetectorRegistration(lambda settings: SunsetDetector(), SunsetDetector.defaults, profiles=("sunset",)),
-    "eclipses": DetectorRegistration(EclipseDetector, EclipseDetector.defaults, EclipseDetector.validate_settings, profiles=("eclipse",)),
+    "eclipses": DetectorRegistration(EclipseDetector, EclipseDetector.defaults, EclipseDetector.validate_settings, profiles=("eclipse",), long_range_horizon='horizon_days'),
     "aurora": DetectorRegistration(AuroraDetector, AuroraDetector.defaults, AuroraDetector.validate_settings, dependencies=("swpc",), lane="live", profiles=("aurora",)),
     "iss": DetectorRegistration(SatellitePassDetector,SatellitePassDetector.defaults,SatellitePassDetector.validate_settings,dependencies=("orbits",),profiles=("satellite",),ephemeris=False),
     "iss_transits": DetectorRegistration(ISSTransitDetector,ISSTransitDetector.defaults,ISSTransitDetector.validate_settings,dependencies=("orbits",),profiles=("transit",),ephemeris=False),

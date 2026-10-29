@@ -157,11 +157,23 @@ acknowledges possible duplication. An OAuth/HTTP rejection is safely FAILED.
 
 ## Persistence, scheduling and failure isolation
 
+Gmail modes additionally use the existing delivery lane for durable daily/weekly
+jobs. These have observer/mode/local-period identity separate from event milestones;
+inclusion in weekly or daily mail cannot consume a later immediate milestone.
+Immediate routing adds a channel-specific intrinsic-interest floor and registry
+selection. Scheduled summaries query persisted predictions only; they do not run
+detectors or providers. The same Gmail adapter renders/sends both message kinds.
+See [Gmail modes](gmail-modes.md) for DST, catch-up, retries and configuration.
+
 SQLite in configurable data_dir uses WAL, foreign keys and busy timeout. Tables
 hold current predictions, revision snapshots, alerts, deliveries, provider cache,
 component health and one typed health record per source. Schema 2 additively
 upgrades schema 1; Phase 3's schema 3 additively adds track_episodes for observer/ICAO
-continuity across restart. Prediction and alert identities are unchanged. JSON envelopes keep
+continuity across restart. Schema 4 additively adds digest_deliveries with a unique
+observer/mode/period, atomic claim, attempts, snapshot, expiry and remote acceptance.
+SENDING digest jobs recover as UNKNOWN, never automatic retries. Compact period
+records persist independently of event retention to preserve deduplication.
+Prediction and alert identities are unchanged. JSON envelopes keep
 extensions local; indexed identity/time columns support UI reads. Keep the database
 on local storage, not SMB/NFS shared by writers. Back up with SQLite's backup
 API or while stopped (do not copy just the main file of a live WAL database).

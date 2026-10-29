@@ -156,7 +156,7 @@ def create_app(service: Service, *, background: bool = True) -> FastAPI:
             upcoming=[p for p in upcoming if parse(p["candidate"]["start"]) > now],
             active=[p for p in upcoming if parse(p["candidate"]["start"]) <= now and p["candidate"]["detector"] != "adsb"],
             aircraft_enabled="adsb" in service.detector_names and 'adsb' in selected,
-            filter_choices=DETECTORS,selected_types=selected,
+            filter_choices=DETECTORS,selected_types=selected,digest_status=service.digest_status(now),
             recent=recent, recent_hours=config.values["service"]["recent_hours"],
             inbox=service.store.inbox(config.observer.key), health=service.store.health_rows(), sources=service.source_views(now)))
 
@@ -240,7 +240,7 @@ def create_app(service: Service, *, background: bool = True) -> FastAPI:
         fields={key:{**spec,'value':get_value(disk.values,key)} for key,spec in field_definitions().items()}
         response=templates.TemplateResponse(request=request,name='settings.html',context=context(request,
             fields=fields,csrf=token,revision=revision,categories=DETECTORS,
-            restart_required=runtime_identity(disk)!=runtime_identity(config)))
+            restart_required=runtime_identity(disk)!=runtime_identity(config),digest_status=service.digest_status(service.clock())))
         response.set_cookie('asa_csrf',token,httponly=True,samesite='strict',secure=request.url.scheme=='https',path='/settings',max_age=3600)
         return response
 
@@ -255,6 +255,10 @@ def create_app(service: Service, *, background: bool = True) -> FastAPI:
         except OSError:raise HTTPException(503,'Atomic configuration save failed; check file permissions') from None
         service.store.health('configuration','restart_required',service.clock(),'Saved operational keys: '+', '.join(changed))
         return {'status':'saved','restart_required':True,'changed':changed,'message':'Saved — restart required. Running settings are unchanged.'}
+
+    @app.get('/api/notifications')
+    def notification_status():
+        return {'scheduled':service.digest_status(service.clock()),'timezone':config.observer.timezone}
 
     @app.get('/camera')
     def camera_page(request: Request):

@@ -1,0 +1,5 @@
+{% if digest_status %}<details><summary>Scheduled Gmail summaries</summary><p>Observer timezone: {{ timezone }}. Accepted by Gmail does not establish inbox receipt.</p>
+{% for job in digest_status %}<h3>{{ job.label }} · {{ 'Enabled' if job.enabled else 'Disabled' }}</h3>
+{% if job.enabled %}<p>Next slot / pending: {{ job.next_at|localtime }}</p>{% endif %}
+<p>Last accepted: {{ job.last_sent_at|localtime if job.last_sent_at else 'None recorded' }}</p>
+{% if job.last %}<p>Latest period {{ job.last.period }}: <strong>{{ job.last.status }}</strong> · {{ job.last.attempts }} attempt(s){% if job.last.error %} · {{ job.last.error }}{% endif %}<br><small>Reference: {{ job.last.id }}</small></p>{% endif %}{% endfor %}</details>{% endif %}

@@ -1,5 +1,5 @@
-# Replace ALL_SKY_USER and /home/ALL_SKY_USER with the SSH account/project path.
-# Install only after foreground validation; this file does not enable itself.
+# Render/install with scripts/install_systemd.py after foreground validation.
+# @...@ values are filled by the installer; do not install this template directly.
 [Unit]
 Description=All Sky Alert predictions and General Pi Camera / Timelapse
 Wants=network-online.target
@@ -9,9 +9,10 @@ StartLimitBurst=5
 
 [Service]
 Type=simple
-User=ALL_SKY_USER
-WorkingDirectory=/home/ALL_SKY_USER/projects/all-sky-alert
-ExecStart=/home/ALL_SKY_USER/projects/all-sky-alert/.venv/bin/python -m all_sky_alert --config /home/ALL_SKY_USER/projects/all-sky-alert/config.toml serve
+User=@SERVICE_USER@
+WorkingDirectory=@PROJECT_DIR@
+# ':' disables environment-variable expansion in paths/arguments.
+ExecStart=:@PYTHON@ -m all_sky_alert --config @CONFIG@ serve
 SupplementaryGroups=video
 Environment=PYTHONUNBUFFERED=1
 Environment=PYTHONDONTWRITEBYTECODE=1

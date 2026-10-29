@@ -158,10 +158,21 @@ def main():
                 page.locator('#map-projections').uncheck();report['map_interaction_and_xss']=True
                 page.goto(base+'/settings',wait_until='networkidle')
                 original=path.read_bytes();page.locator('[name="map.radius_km"]').fill('45')
+                page.locator('[name="gmail.immediate.minimum_interest"]').fill('87')
+                page.locator('[name="gmail.daily_digest.time"]').fill('08:15')
+                page.locator('[name="gmail.weekly_digest.weekday"]').select_option('Saturday')
+                immediate=page.locator('[data-types-field="gmail.immediate.event_types"]')
+                immediate.locator('[data-all]').uncheck()
+                immediate.locator('[data-event-type][value=planetary]').uncheck()
                 page.locator('[name="gmail.enabled"]').uncheck();page.locator('button[type=submit]').click()
                 expect(page.locator('#settings-result')).to_contain_text('restart required')
                 assert load(path).values['map']['radius_km']==45 and path.read_bytes()!=original
                 assert service.config.values['map']['radius_km']==40
+                saved_mail=load(path).values['gmail']
+                assert saved_mail['immediate']['minimum_interest']==87
+                assert 'planetary' not in saved_mail['immediate']['event_types']
+                assert saved_mail['daily_digest']['event_types']==['*']
+                assert saved_mail['daily_digest']['time']=='08:15' and saved_mail['weekly_digest']['weekday']=='Saturday'
                 page.reload();assert 'Saved settings differ' in page.inner_text('body')
                 report['atomic_settings_save_and_restart_banner']=True
                 assert not errors,errors

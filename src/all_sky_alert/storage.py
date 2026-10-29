@@ -33,7 +33,7 @@ class Store:
         self.path = path
         with self.connection() as db:
             version = db.execute("PRAGMA user_version").fetchone()[0]
-            if version not in (0, 1, 2, 3):
+            if version not in (0, 1, 2, 3, 4):
                 raise RuntimeError("Unsupported database version; restore or migrate before starting")
             db.execute("PRAGMA journal_mode=WAL")
             db.executescript("""
@@ -74,13 +74,23 @@ class Store:
               started_at TEXT NOT NULL, last_position_at TEXT NOT NULL,
               payload TEXT NOT NULL, PRIMARY KEY(observer, aircraft)
             );
-            PRAGMA user_version=3;
+            CREATE TABLE IF NOT EXISTS digest_deliveries (
+              id TEXT PRIMARY KEY, observer TEXT NOT NULL, mode TEXT NOT NULL,
+              period TEXT NOT NULL, scheduled_at TEXT NOT NULL, expires_at TEXT NOT NULL,
+              created_at TEXT NOT NULL, status TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0,
+              next_attempt TEXT NOT NULL, payload TEXT NOT NULL, error TEXT, remote_id TEXT, sent_at TEXT,
+              UNIQUE(observer, mode, period)
+            );
+            CREATE INDEX IF NOT EXISTS digest_due ON digest_deliveries(observer,status,next_attempt);
+            PRAGMA user_version=4;
             """)
 
     @contextmanager
     def connection(self):
-        db = sqlite3.connect(self.path, timeout=10)
+        readonly=getattr(self,'_read_only',False)
+        db = sqlite3.connect(self.path.resolve().as_uri()+'?mode=ro' if readonly else self.path, timeout=10, uri=readonly)
         db.row_factory = sqlite3.Row
+        if readonly:db.execute('PRAGMA query_only=ON')
         db.execute("PRAGMA foreign_keys=ON")
         db.execute("PRAGMA busy_timeout=10000")
         try:
@@ -88,6 +98,14 @@ class Store:
                 yield db
         finally:
             db.close()
+
+    @classmethod
+    def open_readonly(cls,path):
+        """Preview-only access: no initialization, schema migration or credentials."""
+        path=Path(path)
+        if not path.is_file():raise FileNotFoundError('No persisted prediction database; run the normal service first')
+        result=cls.__new__(cls);result.path=path;result._read_only=True
+        return result
 
     def health(self, name: str, status: str, now: datetime, message: str) -> None:
         with self.connection() as db:
@@ -258,6 +276,54 @@ class Store:
     def recover_deliveries(self):
         with self.connection() as db:
             db.execute("UPDATE deliveries SET status='UNKNOWN',error='Interrupted send; outcome unknown' WHERE status='SENDING'")
+            db.execute("UPDATE digest_deliveries SET status='UNKNOWN',error='Interrupted send; outcome unknown' WHERE status='SENDING'")
+
+    def prediction_window(self,observer,detectors,start,end,*,starts_only=False):
+        if not detectors:return []
+        slots=','.join('?' for _ in detectors)
+        times='start>? AND start<=?' if starts_only else 'end>? AND start<?'
+        with self.connection() as db:
+            return [json.loads(row[0]) for row in db.execute(
+                f"SELECT payload FROM predictions WHERE observer=? AND detector IN ({slots}) AND state NOT IN ('WITHDRAWN','EXPIRED') AND {times} ORDER BY priority DESC,start,id",
+                (observer,*detectors,iso(start),iso(end)))]
+
+    def digest(self,id):
+        with self.connection() as db:
+            row=db.execute('SELECT * FROM digest_deliveries WHERE id=?',(id,)).fetchone()
+            return {**dict(row),'payload':json.loads(row['payload'])} if row else None
+
+    def enqueue_digest(self,payload,observer,expires,now,*,status='PENDING'):
+        with self.connection() as db:
+            return bool(db.execute('''INSERT OR IGNORE INTO digest_deliveries
+                (id,observer,mode,period,scheduled_at,expires_at,created_at,status,next_attempt,payload)
+                VALUES (?,?,?,?,?,?,?,?,?,?)''',
+                (payload['id'],observer,payload['mode'],payload['period'],payload['scheduled_at'],iso(expires),iso(now),status,iso(now),dumps(payload))).rowcount)
+
+    def claim_digest(self,observer,now):
+        with self.connection() as db:
+            db.execute('BEGIN IMMEDIATE')
+            db.execute("UPDATE digest_deliveries SET status='EXPIRED',error='Digest catch-up window ended' WHERE observer=? AND status IN ('PENDING','FAILED') AND expires_at<=?",(observer,iso(now)))
+            row=db.execute("SELECT * FROM digest_deliveries WHERE observer=? AND status IN ('PENDING','FAILED') AND attempts<5 AND next_attempt<=? ORDER BY scheduled_at,id LIMIT 1",(observer,iso(now))).fetchone()
+            if not row:return None
+            db.execute("UPDATE digest_deliveries SET status='SENDING',attempts=attempts+1 WHERE id=? AND status IN ('PENDING','FAILED')",(row['id'],))
+            return {**dict(row),'attempts':row['attempts']+1,'payload':json.loads(row['payload'])}
+
+    def digest_result(self,id,status,now,attempts,*,error=None,remote_id=None,payload=None):
+        retry=now+timedelta(seconds=min(3600,60*2**min(attempts,6)))
+        with self.connection() as db:
+            db.execute('UPDATE digest_deliveries SET status=?,next_attempt=?,error=?,remote_id=?,sent_at=? WHERE id=?',
+                (status,iso(retry),error,remote_id,iso(now) if status=='SENT' else None,id))
+            if payload is not None:db.execute('UPDATE digest_deliveries SET payload=? WHERE id=?',(dumps(payload),id))
+
+    def retry_digest(self,id,observer,now):
+        with self.connection() as db:
+            return bool(db.execute("UPDATE digest_deliveries SET status='PENDING',attempts=0,next_attempt=?,error=NULL WHERE id=? AND observer=? AND expires_at>? AND status IN ('FAILED','UNKNOWN')",(iso(now),id,observer,iso(now))).rowcount)
+
+    def digest_history(self,observer,mode,*,sent=False):
+        with self.connection() as db:
+            where=" AND status='SENT'" if sent else ''
+            row=db.execute('SELECT id,period,status,scheduled_at,expires_at,created_at,attempts,next_attempt,error,sent_at FROM digest_deliveries WHERE observer=? AND mode=?'+where+' ORDER BY scheduled_at DESC LIMIT 1',(observer,mode)).fetchone()
+            return dict(row) if row else None
 
     def claim_delivery(self, now: datetime, adapters: list[str], observer: str, detectors: list[str]) -> dict | None:
         if not adapters or not detectors:

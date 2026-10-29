@@ -11,6 +11,7 @@ import tomlkit
 
 from .config import DEFAULTS, from_dict
 from .registry import DETECTORS
+from .mail_policy import MODES
 
 
 def field_definitions():
@@ -26,6 +27,8 @@ def field_definitions():
         add(path,label,"bool")
     for path,label in (("service.recent_hours","Recent history (hours)"),
             ("notifications.minimum_interest","Minimum alert interest"),("notifications.minimum_quality","Minimum observing quality"),
+            ("notifications.minimum_confidence","Minimum occurrence/observing confidence (0–1)"),
+            ("notifications.exceptional_interest","Exceptional interest for weather bypass"),
             ("detectors.planetary.minimum_altitude_deg","Planet minimum elevation (°)"),
             ("detectors.adsb.minimum_altitude_deg","Aircraft entry elevation (°)"),("detectors.adsb.exit_altitude_deg","Aircraft exit elevation (°)"),
             ("detectors.adsb.low_altitude_m","Interesting low aircraft height (m)"),("providers.adsb.radius_nm","Acquisition radius (nautical miles)"),
@@ -34,7 +37,19 @@ def field_definitions():
             ("detectors.sky_crystals.horizon_hours","Crystal forecast horizon (hours)"),
             ("detectors.sky_crystals.diamond_temperature_c","Diamond-dust temperature ceiling (°C)")):
         add(path,label,"number")
-    add("gmail.event_types","Email event families","types")
+    for mode in MODES:
+        prefix='gmail.'+mode+'.'
+        add(prefix+'enabled',{'immediate':'Immediate high-interest alerts','daily_digest':'Daily observing digest','weekly_digest':'Weekly long-range look-ahead'}[mode],'bool')
+        if mode!='immediate':
+            add(prefix+'time','Delivery time ('+'observer timezone'+')','time')
+            add(prefix+'catch_up_hours','Maximum catch-up delay (hours)','number')
+            add(prefix+'max_events','Maximum events per email','number')
+        if mode!='daily_digest':add(prefix+'minimum_interest','Minimum intrinsic interest /100','number')
+        if mode=='weekly_digest':
+            add(prefix+'weekday','Delivery weekday','weekday')
+            for key,label in (('start_days_ahead','Strictly beyond this many days'),('end_days_ahead','Through this many days')):
+                add(prefix+key,label,'number')
+        add(prefix+'event_types','Event families','types')
     for path,label in (("camera.enabled","General Pi Camera"),("camera.preview_enabled","Camera preview"),
                        ("camera.timelapse.enabled","Start timelapse on service startup")):
         add(path,label,"bool")
@@ -75,6 +90,11 @@ class ConfigEditor:
             fields=field_definitions()
             if not sync and set(patch)-set(fields):raise ValueError("Unknown or protected setting")
             doc=tomlkit.parse(raw.decode('utf-8'))
+            if 'gmail' in doc and 'event_types' in doc['gmail']:
+                legacy=doc['gmail'].pop('event_types')
+                for mode in MODES:
+                    if mode not in doc['gmail']:doc['gmail'][mode]=tomlkit.table()
+                    if 'event_types' not in doc['gmail'][mode]:doc['gmail'][mode]['event_types']=list(legacy)
             if sync:
                 def fill(target,defaults):
                     for key,value in defaults.items():

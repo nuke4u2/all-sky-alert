@@ -39,6 +39,9 @@ def authorize(client_secret: Path, token: Path):
 
 
 def render_message(alert: dict, recipient: str) -> EmailMessage:
+    if alert.get('kind') == 'digest':
+        from .digests import render_digest
+        return render_digest(alert,recipient)
     prediction = alert["prediction"]
     event, assessment = prediction["candidate"], prediction["assessment"]
     message = EmailMessage()

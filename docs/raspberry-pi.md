@@ -266,8 +266,10 @@ and plan storage/backup manually; large JPEG timelapses can exhaust an SD card.
 
 ## Review and install systemd
 
-The example is [deploy/systemd/all-sky-alert.service](../deploy/systemd/all-sky-alert.service).
-It uses the SSH account, project venv/working directory, `video`, journal logs,
+The [installer](../scripts/install_systemd.py) renders
+[deploy/systemd/all-sky-alert.service](../deploy/systemd/all-sky-alert.service)
+using its checkout path and the current unprivileged SSH account. The unit uses
+the project venv/working directory, `video`, journal logs,
 10-second failure restart delay, private temporary storage, restrictive umask,
 SIGTERM and a 300-second graceful-stop allowance for prediction calculations.
 It keeps real camera devices and home/project access available.
@@ -275,29 +277,42 @@ The application stops the camera producer before Uvicorn drains HTTP/MJPEG
 connections, so open live views end before camera/worker lifespan cleanup.
 A ten-second HTTP graceful deadline remains as a fallback.
 
-**Review the rendered unit before installing or enabling it.** These are manual
-operator commands; no systemd action is performed by the development task:
+After foreground acceptance, stop the foreground server and run as the normal
+service account, **without a leading sudo**. Review the dry-run output, then install:
 
 ```bash
 cd ~/projects/all-sky-alert
-mkdir -p test-artifacts/pi-install
-sed "s/ALL_SKY_USER/$(id -un)/g" deploy/systemd/all-sky-alert.service > test-artifacts/pi-install/all-sky-alert.service
-cat test-artifacts/pi-install/all-sky-alert.service
-systemd-analyze verify test-artifacts/pi-install/all-sky-alert.service
+.venv/bin/python scripts/install_systemd.py --dry-run
+.venv/bin/python scripts/install_systemd.py
 ```
 
-Confirm the account is unprivileged and the paths match its actual home/project.
-After reviewing and passing foreground acceptance, stop the foreground server:
+The script checks prerequisites, validates the rendered unit with
+`systemd-analyze verify`, installs it as root-owned mode 644, reloads systemd,
+enables startup at boot, and starts/restarts it immediately. Only installation
+and privileged systemctl commands use sudo. Re-running replaces the same unit
+and restarts it. Dependencies and config must already be installed; the script
+does not edit config, run config-sync or migrate private state. Normal service
+startup honors configured providers, camera and notification delivery.
+
+Options: `--no-start` installs/enables boot startup without a start/restart now;
+it does not stop an already running service. `--config /path/to/config.toml`
+selects a different config; relative paths resolve from the checkout. `--dry-run`
+checks prerequisites and prints the rendered unit without writes or commands.
+
+Inspect operation and confirm a real boot when convenient:
 
 ```bash
-sudo cp test-artifacts/pi-install/all-sky-alert.service /etc/systemd/system/all-sky-alert.service
-sudo systemctl daemon-reload
-sudo systemctl enable --now all-sky-alert
+systemctl is-enabled all-sky-alert
 systemctl status all-sky-alert --no-pager
 journalctl -u all-sky-alert -f
+# Ctrl+C exits the log viewer. Reboot, reconnect, then check status again:
+sudo reboot
+systemctl status all-sky-alert --no-pager
 ```
 
-Stop before manual/CLI config maintenance. After a web config save:
+To remove boot startup and stop now, run
+`sudo systemctl disable --now all-sky-alert`. Stop before manual/CLI config
+maintenance. After a web config save:
 
 ```bash
 sudo systemctl restart all-sky-alert

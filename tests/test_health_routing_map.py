@@ -78,18 +78,19 @@ def test_email_category_no_replay_and_pending_routing(config,store,conditions,ev
         name='planetary'
         def detect(self,context):return DetectionBatch([event],{event.scope})
     adapter=RecordingAdapter();adapter.name='gmail'
-    config.values['gmail'].update(enabled=True,event_types=['adsb'])
+    config.values['gmail']['enabled']=True
+    config.values['gmail']['immediate'].update(event_types=['adsb'],minimum_interest=0)
     service=Service(config,store=store,conditions=FakeConditions(conditions),detectors=[Detector()],sources={},adapters=[adapter])
     try:
         service.tick(now)
         detail=store.detail(event.id,config.observer.key)
         assert detail['alerts'] and not detail['deliveries'] and not adapter.alerts
-        config.values['gmail']['event_types']=['planetary']
+        config.values['gmail']['immediate']['event_types']=['planetary']
         service.tick(now+timedelta(seconds=10))
         assert not adapter.alerts # Existing ready milestone cannot replay.
         service.tick(event.start-timedelta(minutes=30),deliver=False)
         assert len(store.detail(event.id,config.observer.key)['deliveries'])==1
-        config.values['gmail']['event_types']=[]
+        config.values['gmail']['immediate']['event_types']=[]
         service.dispatch(event.start-timedelta(minutes=29))
         assert not adapter.alerts
         assert store.detail(event.id,config.observer.key)['deliveries'][0]['status']=='CANCELED'

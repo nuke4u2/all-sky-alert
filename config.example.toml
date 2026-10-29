@@ -194,7 +194,30 @@ enabled = false
 destination = ""
 client_secret = "secrets/client_secret.json"
 token = "secrets/gmail_token.json"
-event_types = ["*"] # All current/future families; explicit IDs exclude future types; [] none.
+base_url = "" # Optional explicit UI URL on an allowed host. Never inferred from bind_host.
+
+[gmail.immediate]
+event_types = ["*"] # All current/future families; explicit lists exclude future types.
+enabled = true
+minimum_interest = 85 # Additional email floor; local alert policy is unchanged.
+
+[gmail.daily_digest]
+event_types = ["*"]
+enabled = true
+time = "07:00" # Observer timezone, not machine timezone.
+catch_up_hours = 4 # Also ends at local midnight; no old digest backlog.
+max_events = 20
+
+[gmail.weekly_digest]
+event_types = ["*"]
+enabled = true
+weekday = "Sunday"
+time = "18:00"
+minimum_interest = 70
+start_days_ahead = 7 # Strictly beyond this local-calendar offset from the slot.
+end_days_ahead = 90
+catch_up_hours = 24
+max_events = 20
 
 [map]
 enabled = true

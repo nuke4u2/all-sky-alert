@@ -272,7 +272,7 @@ def test_additive_schema_two_episode_migration_retains_alerts(store,config,now):
     episode=restored.track_episode(config.observer.key,"abc123",now,180,{})
     assert episode["episode_id"]
     with restored.connection() as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0]==3
+        assert db.execute("PRAGMA user_version").fetchone()[0]==4
 
 
 def test_phase3_defaults_validation_and_dst(tmp_path):

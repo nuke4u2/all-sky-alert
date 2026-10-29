@@ -46,9 +46,9 @@ def test_atomic_save_conflicts_invalid_and_replace_failure(configured,monkeypatc
         with pytest.raises(OSError):editor.save({'notifications.enabled':False},revision)
     assert configured.file_path.read_bytes()==original
     assert not list(configured.base.glob('.config-*.tmp'))
-    editor.save({'notifications.enabled':False,'gmail.event_types':['adsb','iss']},revision)
+    editor.save({'notifications.enabled':False,'gmail.immediate.event_types':['adsb','iss']},revision)
     with pytest.raises(RuntimeError):editor.save({'gmail.enabled':True},revision)
-    assert load(configured.file_path).values['gmail']['event_types']==['adsb','iss']
+    assert load(configured.file_path).values['gmail']['immediate']['event_types']==['adsb','iss']
     assert load(configured.file_path).observer==configured.observer
 
 
@@ -60,7 +60,7 @@ def test_settings_csrf_save_restart_protected_size_and_malformed(configured,cond
             assert 'private/custom-token' not in page.text and 'user@example.org' not in page.text
             csrf=re.search('data-csrf="([^"]+)"',page.text)[1]
             revision=re.search('data-revision="([^"]+)"',page.text)[1]
-            body={'revision':revision,'changes':{'detectors.adsb.enabled':True,'gmail.event_types':['adsb'],'notifications.enabled':False}}
+            body={'revision':revision,'changes':{'detectors.adsb.enabled':True,'gmail.immediate.event_types':['adsb'],'notifications.enabled':False}}
             assert client.post('/settings',json=body).status_code==403
             headers={'Origin':'http://evil.example','X-CSRF-Token':csrf}
             assert client.post('/settings',json=body,headers=headers).status_code==403
@@ -76,7 +76,7 @@ def test_settings_csrf_save_restart_protected_size_and_malformed(configured,cond
             assert response.status_code==200 and response.json()['restart_required']
             assert configured.values['notifications']['enabled'] # Startup state unchanged.
             saved=load(configured.file_path)
-            assert saved.values['detectors']['adsb']['enabled'] and saved.values['gmail']['event_types']==['adsb']
+            assert saved.values['detectors']['adsb']['enabled'] and saved.values['gmail']['immediate']['event_types']==['adsb']
             assert saved.observer==configured.observer and saved.values['gmail']['token']=='private/custom-token.json'
             assert client.post('/settings',json=body,headers=headers).status_code==409
             assert 'differ from the running service' in client.get('/settings').text

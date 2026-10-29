@@ -1,13 +1,15 @@
 "use strict";
 const form=document.getElementById('settings-form');
-const all=document.getElementById('email-all');
-const types=[...form.querySelectorAll('[name=email-type]')];
-all.addEventListener('change',()=>{if(all.checked)for(const box of types)box.checked=true;});
-for(const box of types)box.addEventListener('change',()=>{all.checked=false;});
+const groups=[...form.querySelectorAll('[data-types-field]')];
+for(const group of groups){
+  const all=group.querySelector('[data-all]');const types=[...group.querySelectorAll('[data-event-type]')];
+  all.addEventListener('change',()=>{if(all.checked)for(const box of types)box.checked=true;});
+  for(const box of types)box.addEventListener('change',()=>{all.checked=false;});
+}
 form.addEventListener('submit',async event=>{
   event.preventDefault();const changes={};
-  for(const input of form.querySelectorAll('[data-kind]'))changes[input.name]=input.dataset.kind==='bool'?input.checked:Number(input.value);
-  changes['gmail.event_types']=all.checked?['*']:types.filter(box=>box.checked).map(box=>box.value);
+  for(const input of form.querySelectorAll('[data-kind]'))changes[input.name]=input.dataset.kind==='bool'?input.checked:input.dataset.kind==='number'?Number(input.value):input.value;
+  for(const group of groups)changes[group.dataset.typesField]=group.querySelector('[data-all]').checked?['*']:[...group.querySelectorAll('[data-event-type]:checked')].map(box=>box.value);
   const output=document.getElementById('settings-result');const button=form.querySelector('[type=submit]');button.disabled=true;
   try{
     const response=await fetch('/settings',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':form.dataset.csrf},

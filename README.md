@@ -23,6 +23,9 @@ the previous camera implementation or these instructions as hardware acceptance.
   unknown inputs never mean clear skies, and stale scientific inputs cannot alert.
 - Durable predictions/history, unique alert milestones, optional Gmail, source
   health and validated Settings. Routine web reads acquire no upstream data.
+- Gmail has independent high-interest immediate alerts, a daily local-day digest
+  and a weekly long-range look-ahead, with durable period deduplication and safe
+  read-only previews. See [notification modes](docs/gmail-modes.md).
 - **General Pi Camera / Timelapse:** separate Camera page, low-rate live view,
   supported autofocus/manual lens controls, full-resolution JPEG capture and
   configurable timelapse. Camera Module 3 is separate from the future **ZWO
@@ -172,6 +175,44 @@ Initialization is not proof of upstream connectivity/freshness. Keep one process
 and one worker; do not use `--reload`. Ctrl+C stops the foreground service.
 `evaluate` honors configured notification methods; it can send mail if enabled.
 
+## Gmail notification modes
+
+The existing Gmail OAuth adapter now supports three independent family selections:
+
+- Immediate: existing milestones plus an intrinsic-interest floor of **85**.
+  Existing quality/confidence rules and exceptional-event weather bypass still apply.
+- Daily: **07:00 in the observer timezone**, summarizing remaining eligible windows
+  overlapping that local calendar day, including cross-midnight events.
+- Weekly: **Sunday 18:00**, interest at least **70**, starts strictly beyond seven
+  calendar days through 90 days. Currently only eclipses declare a meaningful
+  long-range horizon; the existing 730-day eclipse calculation supplies these rows.
+  Weather, aircraft, aurora and orbital-element forecasts are not extended.
+
+These schedules and thresholds are configurable in Settings and TOML. Saves require
+restart. Existing global Gmail enablement and OAuth paths are preserved; this task
+enabled both schedule modes in the actual config. The example still disables the
+Gmail channel. Legacy `gmail.event_types` migrates into missing per-mode selections;
+explicit mode choices win. `config-sync` writes the new form without erasing values.
+
+Preview current persisted predictions safely (no evaluation, mail, OAuth read or
+database migration; previews work with the older database schema):
+
+```bash
+.venv/bin/python -m all_sky_alert --config config.toml preview-daily-digest
+.venv/bin/python -m all_sky_alert --config config.toml preview-weekly-digest
+```
+
+Windows: replace `.venv/bin/python` with `.venv\Scripts\python.exe`.
+An optional `--date YYYY-MM-DD` selects a reference day; `--format eml` displays
+the exact MIME rendering. Weekly preview defaults to the next slot, or the latest
+slot still within catch-up. No send flag is provided for digest previews.
+Daily catch-up is four hours, weekly 24 hours; empty periods are recorded without
+email. Separate digest identities do not suppress later imminent event alerts.
+Ambiguous outcomes are never automatically retried. Schema 4 adds only the digest
+outbox at normal application initialization. Back up private state before upgrading
+and restart the service to apply the new configuration. No real mail was sent in
+development. See [design, semantics and verification](docs/gmail-modes.md).
+
 ## Camera Module 3
 
 Stop All Sky Alert and other camera consumers before these diagnostics:
@@ -213,27 +254,39 @@ from deferred ZWO imaging and scientific image analysis.
 
 ## systemd service
 
-First pass foreground/camera acceptance, stop the foreground server, and review
-the rendered unit. The distributable template contains `ALL_SKY_USER`; substitute
-the normal SSH/service account, never root. Adjust paths if the project is elsewhere.
+After installing the Pi venv/dependencies, configuring the application and passing
+foreground/camera acceptance, stop the foreground server. Run the installer as
+the normal SSH account that will run the service (without a leading `sudo`):
 
 ```bash
 cd ~/projects/all-sky-alert
-mkdir -p test-artifacts/pi-install
-sed "s/ALL_SKY_USER/$(id -un)/g" deploy/systemd/all-sky-alert.service \
-  > test-artifacts/pi-install/all-sky-alert.service
-cat test-artifacts/pi-install/all-sky-alert.service
-systemd-analyze verify test-artifacts/pi-install/all-sky-alert.service
+.venv/bin/python scripts/install_systemd.py --dry-run
+.venv/bin/python scripts/install_systemd.py
 ```
 
-After review, install manually:
+The [installer](scripts/install_systemd.py) detects the checkout path and current
+account, renders the [unit template](deploy/systemd/all-sky-alert.service), and
+runs `systemd-analyze verify` before installation. It uses `sudo` only to install
+the unit under `/etc/systemd/system`, reload systemd, enable automatic startup at
+every boot, and start/restart the service now. Re-running updates the same unit
+and restarts it. It does not install dependencies or modify config/private state.
+Starting the service uses the configured providers, camera and notifications.
+
+Use `--no-start` to install/enable without starting or restarting now (an already
+running service is left running). Use `--config /absolute/path/config.toml` for
+a different config; relative config paths resolve from the checkout. A dry run
+checks prerequisites and prints the unit without writing files or using sudo.
+
+Check operation, then reboot when convenient to confirm automatic startup:
 
 ```bash
-sudo cp test-artifacts/pi-install/all-sky-alert.service /etc/systemd/system/all-sky-alert.service
-sudo systemctl daemon-reload
-sudo systemctl enable --now all-sky-alert
+systemctl is-enabled all-sky-alert
 systemctl status all-sky-alert --no-pager
 journalctl -u all-sky-alert -f
+# Leave journalctl with Ctrl+C, then test boot startup:
+sudo reboot
+# Reconnect over SSH:
+systemctl status all-sky-alert --no-pager
 ```
 
 The unit uses the project venv/working directory, networking order, `video`,
@@ -241,8 +294,9 @@ unprivileged execution, restrictive umask, journald, failure restart/backoff and
 SIGTERM. It does not embed secrets. The server ends camera streams before draining
 HTTP and the lifespan waits for prediction workers; systemd supplies the final
 stop deadline. Verify hardware release with `sudo systemctl stop all-sky-alert`
-followed by the diagnostic script before restarting. The audit does not install,
-enable or start this unit automatically.
+followed by the diagnostic script before restarting. To stop and disable boot
+startup, use `sudo systemctl disable --now all-sky-alert`. Native Pi boot and
+hardware acceptance must be verified on the target device.
 
 ## LAN access
 

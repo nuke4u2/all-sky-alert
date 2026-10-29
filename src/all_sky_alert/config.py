@@ -11,6 +11,7 @@ from .registry import DETECTORS
 from .sources import SOURCES
 from .network import validate_network
 from .camera.settings import DEFAULTS as CAMERA_DEFAULTS, validate as validate_camera
+from .mail_policy import DEFAULTS as MAIL_DEFAULTS, migrate as migrate_mail, validate as validate_mail
 
 
 DEFAULTS = {
@@ -27,7 +28,7 @@ DEFAULTS = {
                       "watch_lead_hours": 168, "ready_lead_hours": 24,
                       "imminent_lead_minutes": 60, "overrides": {}},
     "gmail": {"enabled": False, "destination": "", "client_secret": "secrets/client_secret.json",
-              "token": "secrets/gmail_token.json", "event_types": ["*"]},
+              "token": "secrets/gmail_token.json", **MAIL_DEFAULTS},
 }
 DEFAULTS["service"].update(bind_host="127.0.0.1", port=8008, lan_access=False, trusted_proxy_ips=[])
 DEFAULTS["map"] = {"enabled": True, "tiles_enabled": True,
@@ -89,6 +90,9 @@ def from_dict(raw, base, file_path=None):
     bounded(observer.get("elevation_m", 0), -500, 10000, "elevation_m")
     ZoneInfo(observer["timezone"])
     obs = Observer(**{"elevation_m": 0, **observer})
+    if 'gmail' in raw:
+        if not isinstance(raw['gmail'],dict):raise ValueError('Expected Gmail table')
+        raw['gmail']=migrate_mail(raw['gmail'])
     values = merge(DEFAULTS, raw)
     validate_camera(values["camera"], base, values["service"]["data_dir"])
     service, atmosphere = values["service"], values["atmosphere"]
@@ -154,9 +158,7 @@ def from_dict(raw, base, file_path=None):
         bounded(m[key],lo,hi,key)
         if key != "radius_km" and not isinstance(m[key],int):
             raise ValueError("Map bounds must be integers")
-    types = values["gmail"]["event_types"]
-    if not isinstance(types,list) or len(types) != len(set(types)) or any(not isinstance(v,str) or v not in {*DETECTORS,"*"} for v in types) or ("*" in types and len(types)>1):
-        raise ValueError("gmail.event_types must be registered detector IDs, [] or ['*']")
+    validate_mail(values['gmail'],service['allowed_hosts'])
     recipient = values["gmail"]["destination"]
     if any(c in recipient for c in "\r\n") or (recipient and ("@" not in recipient or "," in recipient or ";" in recipient)):
         raise ValueError("Set one valid Gmail destination address")
