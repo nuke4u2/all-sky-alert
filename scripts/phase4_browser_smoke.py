@@ -25,6 +25,7 @@ from all_sky_alert.assessment import derive
 from all_sky_alert.config import DEFAULTS, load
 from all_sky_alert.domain import Conditions, DetectionContext, Metric, Observer, iso, parse
 from all_sky_alert.eclipse import EclipseDetector
+from all_sky_alert.jupiter import JupiterDetector
 from all_sky_alert.network import local_address
 from all_sky_alert.policy import lifecycle, priority
 from all_sky_alert.satellites import ISSTransitDetector
@@ -88,7 +89,12 @@ def main():
         center=json.loads((fixtures/'iss-transit-reference.json').read_text())[0]
         transit=ISSTransitDetector({**ISSTransitDetector.defaults,'horizon_hours':1},service.sources['orbits']).detect(
             DetectionContext(Observer(**center['observer']),parse(center['center'])-timedelta(minutes=10),1,service.astronomy)).candidates[0]
-        for candidate in (eclipse,transit):
+        # Jupiter rendering also uses real frozen geometry from a date with
+        # visible activity, independently of the orbital fixture's epoch.
+        jovian=JupiterDetector(values['detectors']['jupiter']).detect(
+            DetectionContext(service.config.observer,parse('2026-10-28T00:00:00Z'),7,service.astronomy)).candidates
+        jupiter=next(e for e in jovian if e.kind=='jupiter.overlap')
+        for candidate in (eclipse,transit,jupiter):
             event=replace(candidate,observer_key=service.config.observer.key)
             assessment=service.profiles[event.profile](event,shared.value)
             service.store.save({'candidate':event.to_dict(),'assessment':asdict(assessment),
@@ -107,7 +113,7 @@ def main():
         rows=service.store.predictions(service.config.observer.key,service.detector_names,now,24*365)
         ids={row['candidate']['detector']:row['candidate']['id'] for row in rows}
         # Historical fixture eclipse/transit can fall outside normal history query.
-        ids.update(eclipses=eclipse.id,iss_transits=transit.id,aurora=aurora.id)
+        ids.update(eclipses=eclipse.id,iss_transits=transit.id,aurora=aurora.id,jupiter=jupiter.id)
         assert set(service.detector_names)<=set(ids),ids
         server=uvicorn.Server(uvicorn.Config(create_app(service,background=False),host='0.0.0.0',
             port=args.port,proxy_headers=False,log_level='warning'))
@@ -142,7 +148,7 @@ def main():
                         dimensions=page.evaluate('({client:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth})')
                         assert dimensions['scroll']<=dimensions['client']+1,(width,endpoint,dimensions)
                         report['viewports'].append({'width':width,'path':endpoint,'overflow':False})
-                        if width==390 and endpoint in ('/','/settings','/aircraft','/events/'+ids['sky_crystals']):
+                        if width==390 and endpoint in ('/','/settings','/aircraft','/events/'+ids['sky_crystals'],'/events/'+ids['jupiter']):
                             page.screenshot(path=str(output/(endpoint.strip('/').replace('/','-') or 'home'))+'.png',full_page=True)
                 page.set_viewport_size({'width':390,'height':900})
                 page.goto(base+'/',wait_until='networkidle')

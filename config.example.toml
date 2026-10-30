@@ -43,6 +43,26 @@ minimum_altitude_deg = 25
 maximum_sun_altitude_deg = -6
 aperture_mm = 203.2
 
+# Dedicated phenomena complement the broad nightly planetary window.
+# Older configs default this optional module off; enable in Settings or here.
+[detectors.jupiter]
+enabled = true
+interval_seconds = 21600
+horizon_days = 14 # Also capped by service.prediction_days; maximum 31.
+minimum_altitude_deg = 30
+maximum_sun_altitude_deg = -6
+aperture_mm = 203.2 # 8-inch reflector; diffraction reference, not a resolution promise.
+phenomena = ["transit", "shadow_transit", "eclipse", "occultation"]
+include_overlaps = true
+transition_window_minutes = 15
+grs_enabled = true
+grs_reference_utc = "2026-06-01T00:00:00Z"
+grs_longitude_deg = 91.0
+grs_drift_deg_per_month = 1.75 # Month = 30.4375 days; published extrapolation.
+grs_reference_max_age_days = 180 # Moon events continue after GRS reference expires.
+grs_window_minutes = 50 # Each side of central-meridian passage.
+grs_source_url = "https://skyandtelescope.org/stargazing-and-observing/interactive-stargazing-tools/transit-times-of-jupiters-great-red-spot/"
+
 [detectors.sunset]
 enabled = true
 interval_seconds = 86400

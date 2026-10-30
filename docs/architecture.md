@@ -81,6 +81,15 @@ the first provider is point/grid based and does not claim horizon resolution.
 
 ## Event representation
 
+The optional `jupiter` detector follows these same contracts: `jovian.py` supplies
+local light-time-corrected Galilean vectors and projected oblate-disk geometry;
+`jupiter.py` clips phenomena to local altitude/darkness and emits Candidates.
+It reuses the `planetary` profile, shared weather/seeing caches, persisted geometry
+batches and ordinary milestones/delivery. Moon/GRS overlaps get distinct intrinsic
+interest; weather never changes their IDs or interest. GRS references have explicit
+scientific expiry, while local moon ephemerides have no observation-age TTL.
+See [Jupiter methods and limitations](jupiter.md).
+
 The small Candidate envelope includes stable ID, detector/kind, observer key,
 start/peak/end UTC, title, intrinsic interest, occurrence confidence, reasons,
 assessment profile, geometry, provenance and a type-specific JSON metadata bag.

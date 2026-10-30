@@ -7,6 +7,14 @@
 <p class="time">{{ e.start|localtime }} → {{ e.end|localtime }}<br><span class="muted">Peak {{ e.peak|localtime }}</span></p>
 <div class="scores detail-scores"><div><span>Intrinsic interest</span><strong>{{ e.interest }}<small>/100</small></strong></div><div><span>Observing quality</span><strong>{{ a.quality if a.quality is not none else 'Unknown' }}{% if a.quality is not none %}<small>/100</small>{% endif %}</strong></div><div><span>Occurrence confidence</span><strong>{{ (e.occurrence_confidence * 100)|round|int }}<small>%</small></strong></div><div><span>Observing confidence</span><strong>{{ (a.confidence * 100)|round|int }}<small>%</small></strong></div></div>
 <h2>Why it’s interesting</h2><ul>{% for reason in e.reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
+{% if e.detector == 'jupiter' %}
+<h2>Jupiter viewing opportunity</h2>
+<p>The viewing window above is restricted to your configured Jupiter elevation and darkness. Intrinsic interest describes the phenomena; observing quality separately weighs cloud cover, seeing, transparency and elevation.</p>
+<div class="table-wrap"><table><thead><tr><th>Phenomenon</th><th>Nominal geometric interval</th><th>Suggested focus / center crossing</th></tr></thead><tbody>{% for f in e.metadata.features %}<tr><td>{{ f.name }}</td><td>{{ f.nominal_start|localtime }} → {{ f.nominal_end|localtime }}</td><td>{{ f.reference_time|localtime }}</td></tr>{% endfor %}</tbody></table></div>
+<p>{{ e.metadata.contact_definition }}</p>
+<p>Eclipse and occultation alerts concern observable disappearance/reappearance, with a short preparation window. Boundaries hidden by the other phenomenon are excluded. A geometric interval may extend beyond local visibility.</p>
+<p>Great Red Spot reference: {{ e.metadata.grs_status }}. {% if e.metadata.grs_status != 'disabled' %}System II {{ e.metadata.grs_reference.longitude_deg }}° at {{ e.metadata.grs_reference.epoch|localtime }}, drift {{ e.metadata.grs_reference.drift_deg_per_month }}° per {{ e.metadata.grs_reference.month_days }} days; reference expires {{ e.metadata.grs_reference.valid_until|localtime }}. <a href="{{ e.metadata.grs_reference.source_url|safe_url }}">Longitude reference</a>. This is an extrapolated cloud position, not a live observation; update its dated reference as new measurements become available.{% endif %}</p>
+{% endif %}
 {% if e.detector == 'eclipses' %}
 <h2>Local eclipse phases</h2>
 <p>Geometric type: {{ e.metadata.geometric_kind }}. Highest phase above your configured horizon: {{ e.metadata.visible_kind }}. Maximum {{ 'is' if e.metadata.maximum_visible else 'is not' }} above that horizon.</p>

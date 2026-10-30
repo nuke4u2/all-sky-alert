@@ -48,7 +48,7 @@ def planetary(event: Candidate, conditions: Conditions) -> Assessment:
                   "cloud clearance": round(100 - clouds.value, 1) if clouds else None,
                   "transparency proxy": transparency.value if transparency else None,
                   seeing_name: round(seeing_score * 100, 1) if seeing_score is not None else None}
-    reasons = ["Interest comes from apparent disk size; altitude and atmosphere affect observing quality separately"]
+    reasons = ["Intrinsic interest reflects the planet or phenomenon; altitude and atmosphere affect observing quality separately"]
     selected = seeing or index
     usable = conditions.status == "fresh" and (selected is None or selected.status == "fresh")
     expires = deadline(conditions.valid_until, selected.valid_until if selected else None)

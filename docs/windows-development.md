@@ -38,6 +38,11 @@ metrics, geometry, sources, alerts and recorded revisions. Eclipse details show
 local contacts/visible phases and solar-viewing safety. Aurora details explain
 bearing, elevation-height scenarios, darkness and Moon interference. Source health
 ages observation/model timestamps on every page/API read, even if a worker stalls.
+For [Jupiter moon and Great Red Spot events](jupiter.md), enable **Jupiter moons /
+Great Red Spot** in Settings, save and restart. Existing private config is not
+automatically changed. The example config contains the full optional Jupiter
+table; its 8-inch aperture is only a diffraction reference. Update the dated GRS
+longitude/drift/reference together in the TOML file with the service stopped.
 Existing configurations do not automatically enable the new detectors: add their
 tables below or use `config-sync`. The example enables them; preserve your observer
 settings when upgrading. These instructions do not describe or alter your private configuration. Enable LAN/optional providers explicitly.

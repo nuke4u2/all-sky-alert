@@ -1,5 +1,19 @@
 # Source capability matrix
 
+## Jupiter module — 2026-10-28
+
+The optional [Jupiter detector](jupiter.md) uses the existing MIT-licensed
+[Astronomy Engine](https://github.com/cosinekitty/astronomy) for local Galilean
+vectors, light-time and rotation-pole geometry, with NASA one-bar radii and
+System II rotation constants. It adds no runtime requests or dependencies.
+The [dated GRS estimate](https://skyandtelescope.org/stargazing-and-observing/interactive-stargazing-tools/transit-times-of-jupiters-great-red-spot/)
+is configurable and expires independently of local moon ephemerides; it is not a
+live measurement. Shared Open-Meteo/ECCC acquisition supplies observing quality.
+Independent [Guide 9.1 event times](https://projectpluto.com/jevent.htm) are offline
+test references only. Approximate center/umbra/shadow-center planning geometry is
+explicitly distinct from finite-moon/photometric contacts; see the method limits
+and measured reference differences in the Jupiter guide.
+
 ## Phase 4 decisions — 2026-10-10
 
 Latest implementation status supersedes the historical surveys below.

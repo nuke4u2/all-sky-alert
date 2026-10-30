@@ -16,6 +16,11 @@ the previous camera implementation or these instructions as hardware acceptance.
 
 - Jupiter/Saturn/Mars observing windows, sunset opportunities and observer-local
   solar/lunar eclipses with horizon clipping and solar safety.
+- Optional [Jupiter phenomena](docs/jupiter.md): Galilean moon transits, shadow
+  transits, observable eclipse/occultation transitions and simultaneous Great Red
+  Spot opportunities. Shared cloud/seeing/elevation assessment stays separate
+  from intrinsic interest. Enable **Jupiter moons / Great Red Spot** in Settings
+  and restart; older configurations keep this new module disabled.
 - NOAA OVATION aurora opportunities, ISS/configured spacecraft passes, experimental
   ISS Sun/Moon center-track transits and live ADS-B overhead episodes/map.
 - Shared weather, optional native Canadian seeing categories and optional sparse

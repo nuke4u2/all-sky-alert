@@ -20,6 +20,7 @@ def field_definitions():
     for name,spec in DETECTORS.items():
         add(f"detectors.{name}.enabled",spec.label or name.replace('_',' ').title(),"bool")
     for path,label in (("atmosphere.enabled","Shared weather"),("atmosphere.canadian.enabled","Canadian seeing"),
+            ("detectors.jupiter.grs_enabled","Jupiter Great Red Spot (dated reference)"),
             ("providers.adsb.enabled","ADSB.lol positions"),("providers.orbits.enabled","CelesTrak orbits"),
             ("providers.swpc.enabled","NOAA aurora"),("providers.hrrr.enabled","Experimental HRRR microphysics"),
             ("notifications.enabled","Local alert milestones"),("gmail.enabled","Gmail delivery"),
@@ -30,6 +31,7 @@ def field_definitions():
             ("notifications.minimum_confidence","Minimum occurrence/observing confidence (0–1)"),
             ("notifications.exceptional_interest","Exceptional interest for weather bypass"),
             ("detectors.planetary.minimum_altitude_deg","Planet minimum elevation (°)"),
+            ("detectors.jupiter.minimum_altitude_deg","Jupiter phenomena minimum elevation (°)"),
             ("detectors.adsb.minimum_altitude_deg","Aircraft entry elevation (°)"),("detectors.adsb.exit_altitude_deg","Aircraft exit elevation (°)"),
             ("detectors.adsb.low_altitude_m","Interesting low aircraft height (m)"),("providers.adsb.radius_nm","Acquisition radius (nautical miles)"),
             ("map.radius_km","Map interest radius (km)"),("map.track_minutes","Observed trail retention (minutes)"),

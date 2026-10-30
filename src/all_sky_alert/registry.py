@@ -13,6 +13,7 @@ from .domain import Detector
 from .satellites import SatellitePassDetector, ISSTransitDetector
 from .aircraft import AircraftDetector
 from .crystals import SkyCrystalDetector
+from .jupiter import JupiterDetector
 
 
 @dataclass(frozen=True)
@@ -33,6 +34,8 @@ class DetectorRegistration:
 
 
 DETECTORS = {
+    "jupiter": DetectorRegistration(JupiterDetector, JupiterDetector.defaults, JupiterDetector.validate_settings,
+                                    profiles=("planetary",), label="Jupiter moons / Great Red Spot"),
     "planetary": DetectorRegistration(PlanetaryDetector, PlanetaryDetector.defaults, PlanetaryDetector.validate_settings, profiles=("planetary",)),
     "sunset": DetectorRegistration(lambda settings: SunsetDetector(), SunsetDetector.defaults, profiles=("sunset",)),
     "eclipses": DetectorRegistration(EclipseDetector, EclipseDetector.defaults, EclipseDetector.validate_settings, profiles=("eclipse",), long_range_horizon='horizon_days'),
