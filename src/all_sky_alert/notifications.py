@@ -8,6 +8,8 @@ from pathlib import Path
 
 import httpx
 
+from .aircraft_display import aircraft_summary
+
 SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
 
 
@@ -47,14 +49,26 @@ def render_message(alert: dict, recipient: str) -> EmailMessage:
     message = EmailMessage()
     message["To"] = recipient
     # Gmail supplies the authenticated sender; no Gmail read/profile scope is needed.
-    message["Subject"] = f"All Sky Alert · {alert['stage']} · {event['title']}"
+    plane = aircraft_summary(event.get("metadata", {})) if event.get("detector") == "adsb" else None
+    title = f"{plane['airline']} · {plane['type_name']} · {plane['origin']} → {plane['destination']} · {plane['identity']}" if plane else event["title"]
+    message["Subject"] = f"All Sky Alert · {alert['stage']} · {title}"
     message["Message-ID"] = f"<{alert['id'].replace(':', '.')}@all-sky-alert.local>"
     quality = "unknown" if assessment["quality"] is None else f"{assessment['quality']}/100"
-    text = [event["title"], f"Start (UTC): {event['start']}", f"Peak (UTC): {event['peak']}",
+    text = ([f"Airline: {plane['airline']}", f"Plane type: {plane['type_name']}", f"Origin: {plane['origin']}", f"Destination: {plane['destination']}",
+             f"Flight: {plane['identity']}", f"Reported ICAO type: {plane['type_code'] or 'unknown'}", ""] if plane else [])
+    text += [event["title"], f"Start (UTC): {event['start']}", f"Peak (UTC): {event['peak']}",
             f"Intrinsic interest: {event['interest']}/100; observing quality: {quality}",
             f"Occurrence confidence: {event['occurrence_confidence']}; assessment confidence: {assessment['confidence']}",
             f"Atmosphere: {assessment['conditions']['status']}", "", *event["reasons"], *assessment["reasons"], "", "Sources:"]
     text += [f"{s['name']}: {s['url']}" for s in event["sources"]]
+    if plane:
+        text += [plane['type_method']]
+        if plane['type_source_name']:
+            text += [f"{plane['type_source_name']}: {plane['type_source_url']}"]
+        if plane['route_source_name']:
+            text += [f"Origin/destination source: {plane['route_source_name']}"]
+        if plane['airline_source_name']:
+            text += [f"Airline source: {plane['airline_source_name']}"]
     safety = event.get("metadata", {}).get("safety")
     if safety:
         text += ["", "SOLAR VIEWING SAFETY", safety["text"], safety["url"]]

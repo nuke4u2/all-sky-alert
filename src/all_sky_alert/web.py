@@ -23,6 +23,7 @@ from .registry import DETECTORS
 from .config_edit import ConfigEditor,field_definitions,get_value,runtime_identity
 from .health import aggregate
 from .tracks import map_snapshot
+from .aircraft_display import aircraft_summary
 from .camera.manager import CameraUnavailable, CameraBusy
 
 
@@ -162,6 +163,7 @@ def create_app(service: Service, *, background: bool = True) -> FastAPI:
     templates = Jinja2Templates(directory=directory / "templates")
     templates.env.filters["localtime"] = lambda value: parse(value).astimezone(ZoneInfo(config.observer.timezone)).strftime("%a %b %d %Y, %I:%M %p %Z")
     templates.env.filters["safe_url"] = safe_url
+    templates.env.filters["aircraft_summary"] = aircraft_summary
     templates.env.filters["precisetime"] = lambda value: parse(value).astimezone(ZoneInfo(config.observer.timezone)).strftime("%Y-%m-%d %H:%M:%S.%f %Z")
 
     @app.middleware("http")
@@ -235,7 +237,8 @@ def create_app(service: Service, *, background: bool = True) -> FastAPI:
             aircraft.append({"id":e["id"],"title":e["title"],"prose":e["metadata"]["prose"],
                 "track_state":e["metadata"]["track_state"],"position_at":e["metadata"]["position_at"],
                 "position_age_seconds":round((now-parse(e["metadata"]["position_at"])).total_seconds(),1),
-                "geometry":e["geometry"],"interest":e["interest"],"valid_until":e["valid_until"]})
+                "geometry":e["geometry"],"interest":e["interest"],"valid_until":e["valid_until"],
+                "aircraft_summary":aircraft_summary(e["metadata"],now)})
         return {"checked_at":now.isoformat(),"aircraft":aircraft,"timezone":config.observer.timezone,
                 "note":"Fresh recorded positions, not confirmed visual sightings. Unknown routes are never inferred."}
 

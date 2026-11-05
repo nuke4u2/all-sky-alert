@@ -183,7 +183,15 @@ Feed emergency reports are unverified, not official advisories. See provider hea
 for coverage gaps/backoff. The focused live view removes expired inputs even if
 the worker stalls; retained details/history show the recorded state with timestamps.
 
-**Optional route/type enrichment:** disabled by default. No unrestricted live route
+**Aircraft display:** live cards, map labels/details, recorded alerts and immediate
+email put airline, manufacturer/base model and origin/destination first. Callsign,
+reported ICAO type and flight geometry follow. Common reported ICAO codes have a
+small offline base-model lookup from [FAA JO 7360.1E (2019), Appendix A](https://www.faa.gov/documentLibrary/media/Order/2019-10-10_Order_JO_7360.1E_Aircraft_Type_Designators_FINAL.pdf).
+It groups variants into model families, not an exact variant or license-built
+manufacturer determination; unfamiliar codes remain unknown. Type provenance is
+shown in the aircraft details. UI reads never acquire upstream metadata.
+
+**Optional airline/route/type enrichment:** disabled by default. No unrestricted live route
 source was verified; ADSBDB route data require permission and are not incorporated.
 You may supply a JSON file containing records you own or have permission to use:
 
@@ -191,6 +199,7 @@ You may supply a JSON file containing records you own or have permission to use:
 [
   {
     "icao24": "abc123", "callsign": "JBU123", "type_name": "Airbus A320",
+    "airline": "Example Air", "manufacturer": "Airbus", "base_model": "A320",
     "origin": "JFK", "destination": "BOS",
     "updated_at": "2026-10-09T12:00:00Z", "valid_until": "2026-10-09T18:00:00Z",
     "source_name": "My licensed source", "source_url": "https://example.org/",
@@ -201,11 +210,17 @@ You may supply a JSON file containing records you own or have permission to use:
 
 This is a **synthetic schema example**, not real flight information. Set
 `providers.enrichment.enabled=true` and `path` to your own file, relative to config.
-Routes require exact aircraft **and** callsign binding plus both endpoints. Metadata
+Airline and routes require exact aircraft **and** callsign binding; routes also
+require both endpoints. Airline is never guessed from a callsign or owner.
+`manufacturer` and `base_model` are optional but must be supplied together; they
+take display precedence over legacy `type_name`, which is still supported. Metadata
 must have provenance/rights, positive validity <=7 days and age <=24 hours by default.
 Type-only records may omit callsign/endpoints. Metadata refreshes hourly, independent
 of positions. Missing/malformed/expired enrichment never suppresses positional
-events and is reported as route unknown. Source health/record age are independent.
+events. Missing airline and endpoints display explicit unknown labels. Live reads
+recheck metadata validity and its age limit independently of position validity;
+historical event/alert details retain the recorded metadata and timestamps.
+Source health/record age are independent.
 
 **Explicit public connectivity smoke (no mail or credentials):**
 

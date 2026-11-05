@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 
 from all_sky_alert.adsb import ADSBLol,AircraftState,normalize_readsb
 from all_sky_alert.aircraft import AircraftDetector,motion
+from all_sky_alert.aircraft_display import aircraft_summary,TYPE_REFERENCE
 from all_sky_alert.enrichment import LocalEnrichment
 from all_sky_alert.domain import Conditions,DetectionContext,Observer,iso,parse
 from all_sky_alert.assessment import aircraft
@@ -20,6 +21,7 @@ from all_sky_alert.service import Service
 from all_sky_alert.storage import Store
 from all_sky_alert.source_health import views
 from all_sky_alert.web import create_app
+from all_sky_alert.notifications import render_message
 from conftest import FakeConditions,RecordingAdapter
 
 
@@ -168,6 +170,73 @@ def test_enrichment_requires_bound_route_and_rights(now):
         broken={**row};broken.pop(key)
         with pytest.raises((ValueError,KeyError)):
             LocalEnrichment.validate([broken])
+
+
+@pytest.mark.parametrize('code,name', [('A20N','Airbus A320'),('B738','Boeing 737'),
+    ('E75L','Embraer E175'),('ZZZZ','Aircraft type unknown'),(None,'Aircraft type unknown')])
+def test_aircraft_presentation_decodes_only_known_types(code,name):
+    summary=aircraft_summary({'type_code':code,'callsign':'JBU123','icao24':'abc123'})
+    assert summary['type_name']==name
+    assert summary['airline']=='Airline unknown' # Callsign alone is not sourced airline metadata.
+    assert summary['origin']=='Unknown origin' and summary['destination']=='Unknown destination'
+    assert summary['type_source_url']==(None if name=='Aircraft type unknown' else TYPE_REFERENCE)
+
+
+def test_aircraft_metadata_validation_and_legacy_compatibility(now):
+    row={**enrichment_record(now),'airline':'Fixture Air','manufacturer':'Airbus','base_model':'A320'}
+    LocalEnrichment.validate([row])
+    assert aircraft_summary({'enrichment':row})['airline']=='Fixture Air'
+    LocalEnrichment.validate([enrichment_record(now)]) # Older records still work.
+    for changes in ({'airline':'bad\nheader'},{'airline':'x'*129},{'callsign':None},
+                    {'manufacturer':None},{'base_model':None}):
+        with pytest.raises(ValueError):LocalEnrichment.validate([{**row,**changes}])
+    assert aircraft_summary({'enrichment':{**row,'airline':'   '}})['airline']=='Airline unknown'
+
+
+def test_airline_type_route_ui_mail_and_independent_metadata_expiry(store,config,radius,now,conditions,tmp_path):
+    radius['ac']=radius['ac'][:1]
+    airline='<img src=x onerror=evil>'
+    row={**enrichment_record(now),'airline':airline,'manufacturer':'Airbus','base_model':'A320',
+         'type_name':'Legacy variant name','updated_at':iso(now-timedelta(hours=24)+timedelta(seconds=5)),
+         'valid_until':iso(now+timedelta(hours=1))}
+    path=tmp_path/'metadata.json';path.write_text(json.dumps([row]))
+    source,metadata,detector,client=setup_sources(store,config,radius,now,enrichment_path=path)
+    clock=[now]
+    service=Service(config,store=store,conditions=FakeConditions(conditions),detectors=[detector],
+        sources={'adsb':source,'enrichment':metadata},adapters=[],clock=lambda:clock[0])
+    try:
+        service.tick(now,lane='live')
+        event=service.upcoming(now)[0]['candidate']
+        stored=store.detail(event['id'],config.observer.key)
+        assert stored['alerts']
+        message=render_message({'id':'fixture-alert','stage':'active','prediction':stored},'test@example.org')
+        assert f'{airline} · Airbus A320 · JFK → BOS' in str(message['Subject'])
+        body=message.get_content()
+        assert body.startswith(f'Airline: {airline}\nPlane type: Airbus A320\nOrigin: JFK\nDestination: BOS\n')
+        assert 'Airline source: Test user' in body
+        with TestClient(create_app(service,background=False),base_url='http://localhost') as web:
+            live=web.get('/api/live').json()['aircraft'][0]['aircraft_summary']
+            mapped=web.get('/api/aircraft').json()['aircraft'][0]['aircraft_summary']
+            assert live==mapped
+            assert live['airline']==airline and live['type_name']=='Airbus A320'
+            assert live['origin']=='JFK' and live['destination']=='BOS'
+            page=web.get('/events/'+event['id']).text
+            assert '<h1>Airbus A320</h1>' in page
+            assert '&lt;img src=x onerror=evil&gt;' in page and '<img src=x onerror=evil>' not in page
+            assert page.index('class="aircraft-airline"') < page.index('<h1>Airbus A320</h1>') < page.index('class="scores')
+            home=web.get('/').text
+            assert '&lt;img src=x onerror=evil&gt;' in home # Recorded UI alert uses the same presentation.
+            clock[0]=now+timedelta(seconds=6) # Position remains fresh; catalog age limit has passed.
+            for endpoint in ('/api/live','/api/aircraft'):
+                summary=web.get(endpoint).json()['aircraft'][0]['aircraft_summary']
+                assert summary['airline']=='Airline unknown'
+                assert summary['origin']=='Unknown origin' and summary['destination']=='Unknown destination'
+                assert summary['type_name']=='Airbus A320' # Offline type lookup remains usable.
+            # Historical event data are still labeled as recorded, not silently rewritten.
+            assert '&lt;img src=x onerror=evil&gt;' in web.get('/events/'+event['id']).text
+        assert stored==store.detail(event['id'],config.observer.key) # UI reads do not revise events.
+    finally:
+        service.close();client.close()
 
 
 def test_interest_rules_and_emergency_are_not_route_inference(store,config,radius,now):

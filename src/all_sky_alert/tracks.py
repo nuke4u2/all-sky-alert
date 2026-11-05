@@ -7,6 +7,7 @@ from threading import RLock
 
 from .domain import iso, parse
 from .aircraft import motion
+from .aircraft_display import aircraft_summary
 
 
 class TrackBuffer:
@@ -75,6 +76,7 @@ def map_snapshot(service,now):
         result['aircraft'].append({**asdict(state),'position_age_seconds':round(age,1),
             'valid_until':iso(parse(state.position_at)+timedelta(seconds=source.settings['stale_seconds'])),
             'geometry':geometry,'history':points,'predicted':future,
-            'enrichment':{key:metadata.get(key) for key in ('type_name','origin','destination','updated_at','source_name','source_url','age_seconds')} if metadata else None})
+            'aircraft_summary':aircraft_summary({**asdict(state),'enrichment':metadata},now),
+            'enrichment':{key:metadata.get(key) for key in ('airline','type_name','manufacturer','base_model','origin','destination','updated_at','source_name','source_url','age_seconds')} if metadata else None})
     result['aircraft'].sort(key=lambda row:row['geometry']['range_km'])
     return result

@@ -35,7 +35,7 @@ class LocalEnrichment:
             raise ValueError("Enrichment must be a bounded record list")
         keys = set()
         for row in data:
-            if not isinstance(row,dict) or set(row)-{"icao24","callsign","type_name","origin","destination",
+            if not isinstance(row,dict) or set(row)-{"icao24","callsign","airline","type_name","manufacturer","base_model","origin","destination",
                     "updated_at","valid_until","source_name","source_url","rights"}:
                 raise ValueError("Unknown enrichment fields")
             for field in ("icao24","updated_at","valid_until","source_name","source_url","rights"):
@@ -48,8 +48,12 @@ class LocalEnrichment:
                 raise ValueError("Invalid enrichment source URL")
             if not parse(row["updated_at"]) < parse(row["valid_until"]) <= parse(row["updated_at"])+timedelta(days=7):
                 raise ValueError("Enrichment validity must be positive and at most 7 days")
-            for key in ("callsign","type_name","origin","destination"):
+            for key in ("callsign","airline","type_name","manufacturer","base_model","origin","destination"):
                 text(row.get(key),128)
+            if bool(text(row.get("manufacturer"),128)) != bool(text(row.get("base_model"),128)):
+                raise ValueError("Manufacturer and base model must be supplied together")
+            if text(row.get("airline"),128) and not text(row.get("callsign"),128):
+                raise ValueError("Airline needs a bound aircraft and callsign")
             route = row.get("origin") or row.get("destination")
             if route and not (row.get("callsign") and row.get("origin") and row.get("destination")):
                 raise ValueError("Routes need bound aircraft, callsign and both endpoints")
@@ -94,5 +98,6 @@ class LocalEnrichment:
                 age = (now-parse(row["updated_at"])).total_seconds()
                 if age < 0 or age > self.settings["max_age_hours"]*3600 or now > parse(row["valid_until"]):
                     continue
-                return {**row,"age_seconds":round(age,1),"retrieved_at":self.health.retrieved_at,"status":"fresh"}
+                return {**row,"age_seconds":round(age,1),"retrieved_at":self.health.retrieved_at,"status":"fresh",
+                        "usable_until":iso(min(parse(row["valid_until"]),parse(row["updated_at"])+timedelta(hours=self.settings["max_age_hours"])))}
         return None

@@ -1,7 +1,13 @@
 {% extends 'base.html' %}
+{% from 'aircraft_summary.html' import route %}
 {% block content %}{% set e = p.candidate %}{% set a = p.assessment %}
 <p><a href="/">← All predictions</a></p>
-<p class="eyebrow">{{ e.kind|replace('.', ' ')|title }} · {{ p.state|title }}</p><h1>{{ e.title }}</h1>
+<p class="eyebrow">{{ e.kind|replace('.', ' ')|title }} · {{ p.state|title }}</p>
+{% if e.detector == 'adsb' %}{% set plane = e.metadata|aircraft_summary %}
+<p class="aircraft-airline">{{ plane.airline }}</p>
+<h1>{{ plane.type_name }}</h1>{{ route(plane) }}
+<p class="muted">{{ plane.identity }}{% if plane.type_code %} · ICAO type {{ plane.type_code }}{% endif %} · recorded episode</p>
+{% else %}<h1>{{ e.title }}</h1>{% endif %}
 {% if p.inputs_expired %}<p>Recorded prediction inputs have expired. This forecast remains available for inspection and cannot qualify an alert without updated inputs.</p>{% endif %}
 {% if e.metadata.safety %}<aside class="safety"><strong>Solar viewing safety</strong><p>{{ e.metadata.safety.text }}</p><a href="{{ e.metadata.safety.url|safe_url }}">NASA solar-viewing guidance</a></aside>{% endif %}
 <p class="time">{{ e.start|localtime }} → {{ e.end|localtime }}<br><span class="muted">Peak {{ e.peak|localtime }}</span></p>
@@ -42,7 +48,9 @@
 <p>Position sample {{ e.metadata.position_at|precisetime }}. State at evaluation: {{ e.metadata.track_state }}; {{ e.metadata.position_kind }}. A recorded state is not a current claim after input expiry.</p>
 <p>Geometry estimated at {{ e.metadata.geometry_at|precisetime }} from the position sample, {{ e.metadata.position_age_seconds }} s old. Unknown velocity leaves the position at its recorded time.</p>
 <p>{{ e.metadata.prose }}</p><p>{{ e.metadata.projection_method }}.</p>
-<p>Route: {{ e.metadata.route_status }}. {% if e.metadata.enrichment %}Metadata updated {{ e.metadata.enrichment.updated_at|localtime }}; age at evaluation {{ e.metadata.enrichment.age_seconds }} s. Source: {{ e.metadata.enrichment.source_name }}.{% endif %}</p>
+<p>{{ plane.type_method }}.{% if plane.type_source_name %} <a href="{{ plane.type_source_url|safe_url }}">{{ plane.type_source_name }}</a>.{% endif %}</p>
+{% if plane.airline_source_name %}<p>Airline source: {{ plane.airline_source_name }}.</p>{% endif %}
+<p>Route: {{ e.metadata.route_status }}. {% if plane.route_source_name %}Origin and destination source: {{ plane.route_source_name }}.{% endif %} {% if e.metadata.enrichment %}Metadata updated {{ e.metadata.enrichment.updated_at|localtime }}; age at evaluation {{ e.metadata.enrichment.age_seconds }} s. Source: {{ e.metadata.enrichment.source_name }}.{% endif %}</p>
 {% endif %}
 <h2>Observing assessment</h2><ul>{% for reason in a.reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
 <div class="table-wrap"><table><thead><tr><th>Factor</th><th>Score /100</th></tr></thead><tbody>{% for name, score in a.components.items() %}<tr><td>{{ name }}</td><td>{{ score if score is not none else 'Unknown' }}</td></tr>{% endfor %}</tbody></table></div>

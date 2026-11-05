@@ -23,6 +23,9 @@ the previous camera implementation or these instructions as hardware acceptance.
   and restart; older configurations keep this new module disabled.
 - NOAA OVATION aurora opportunities, ISS/configured spacecraft passes, experimental
   ISS Sun/Moon center-track transits and live ADS-B overhead episodes/map.
+- Aircraft cards, map labels and notifications lead with airline, manufacturer/base
+  model and origin/destination. Airline/routes use optional sourced metadata;
+  missing details stay unknown. Common type codes have an offline model lookup.
 - Shared weather, optional native Canadian seeing categories and optional sparse
   HRRR ice-crystal optics opportunities. Scores are uncalibrated opportunities;
   unknown inputs never mean clear skies, and stale scientific inputs cannot alert.

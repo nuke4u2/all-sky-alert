@@ -8,17 +8,30 @@
   const add=(parent,tag,text)=>{const node=document.createElement(tag);node.textContent=text;parent.appendChild(node);return node;};
   function show(row){
     selected=row.icao24;detail.replaceChildren();
-    add(detail,'h3',row.callsign||'Aircraft '+row.icao24.toUpperCase());
+    for(const button of list.querySelectorAll('button'))button.setAttribute('aria-pressed',String(button.dataset.icao24===selected));
+    const summary=row.aircraft_summary;
+    add(detail,'p',summary.airline).className='aircraft-airline';
+    add(detail,'h3',summary.type_name).className='aircraft-type';
+    route(detail,summary);
+    add(detail,'p',summary.identity+(row.type_code?' · ICAO type '+row.type_code:'')).className='muted';
     const meta=row.enrichment;
-    add(detail,'p',(meta&&meta.type_name)||row.type_code||'Aircraft type unknown');
-    add(detail,'p',meta&&meta.origin&&meta.destination?meta.origin+' → '+meta.destination+' (database enrichment)':'Route unknown');
     add(detail,'p',(row.altitude_m/0.3048).toLocaleString(undefined,{maximumFractionDigits:0})+' ft · '+row.altitude_kind);
     const g=row.geometry;
     add(detail,'p',g.range_km.toFixed(1)+' km / '+(g.range_km*0.621371).toFixed(1)+' mi slant range · '+g.altitude_deg.toFixed(1)+'° elevation');
     add(detail,'p',g.from_direction+(g.toward_direction?' → '+g.toward_direction:'; motion unknown'));
     add(detail,'p','Observed position '+row.position_age_seconds+' seconds old; '+row.position_kind+'. Ground track '+(row.track_deg===null?'unknown':row.track_deg+'°')+'.');
-    if(meta)add(detail,'p','Enrichment: '+meta.source_name+' · '+meta.age_seconds+' seconds old. '+(meta.updated_at||''));
+    add(detail,'p',summary.type_method+(summary.type_source_name?' · '+summary.type_source_name:'')).className='muted';
+    if(meta)add(detail,'p','Metadata: '+meta.source_name+' · '+meta.age_seconds+' seconds old. '+(meta.updated_at||''));
+    if(summary.airline_source_name)add(detail,'p','Airline source: '+summary.airline_source_name+'.').className='muted';
+    if(summary.route_source_name)add(detail,'p','Route source: '+summary.route_source_name+'. Reported endpoints; the dashed line is not this route.');
     add(detail,'p','Dashed projection is a short estimate; turns/climbs and visual detection are unresolved.');
+  }
+  function route(parent,summary){
+    const endpoints=add(parent,'span','');endpoints.className='aircraft-route';
+    for(const [label,value] of [['Origin',summary.origin],['Destination',summary.destination]]){
+      const endpoint=add(endpoints,'span','');
+      add(endpoint,'small',label);add(endpoint,'strong',value);
+    }
   }
   function clear(){
     for(const timer of expiryTimers)clearTimeout(timer);expiryTimers=[];
@@ -50,7 +63,9 @@
       L.circle(observer,{radius:data.radius_km*1000,color:'#f08000',fill:false,weight:1}).addTo(layer);
       for(const row of data.aircraft){
         current.set(row.icao24,row);const items=[];
-        const label=document.createElement('span');label.textContent=row.callsign||row.icao24.toUpperCase();
+        const summary=row.aircraft_summary;
+        const label=document.createElement('span');label.className='aircraft-tooltip';
+        add(label,'strong',summary.airline);add(label,'strong',summary.type_name);add(label,'span',summary.origin+' → '+summary.destination);add(label,'small',summary.identity);
         const marker=L.circleMarker([row.latitude,row.longitude],{radius:9,color:'#4bcaff',fillOpacity:0.8,weight:2}).addTo(layer).bindTooltip(label);
         marker.on('click',()=>show(row));items.push(marker);
         const solid=L.polyline(row.history.map(p=>[p.latitude,p.longitude]),{color:'#4bcaff',weight:3}).addTo(layer);items.push(solid);
@@ -58,7 +73,13 @@
         if(row.track_deg!==null){const r=row.track_deg*Math.PI/180;items.push(L.polyline([[row.latitude,row.longitude],
           [row.latitude+.015*Math.cos(r),row.longitude+.015*Math.sin(r)/Math.max(.1,Math.cos(row.latitude*Math.PI/180))]],{color:'#fff',weight:2}).addTo(layer));}
         if(projections.checked&&row.predicted.length)items.push(L.polyline(row.predicted,{color:'#ffc58a',weight:2,dashArray:'6 8'}).addTo(layer));
-        const button=add(list,'button',(row.callsign||row.icao24.toUpperCase())+' · '+(row.altitude_m/.3048).toLocaleString(undefined,{maximumFractionDigits:0})+' ft');
+        const button=add(list,'button','');button.className='aircraft-choice';
+        button.dataset.icao24=row.icao24;
+        button.setAttribute('aria-pressed',String(selected===row.icao24));
+        add(button,'span',summary.airline).className='aircraft-airline';
+        add(button,'strong',summary.type_name).className='aircraft-type';
+        route(button,summary);
+        add(button,'span',summary.identity+' · '+(row.altitude_m/.3048).toLocaleString(undefined,{maximumFractionDigits:0})+' ft').className='muted';
         button.type='button';button.addEventListener('click',()=>{show(row);map.panTo([row.latitude,row.longitude]);});
         expiryTimers.push(setTimeout(()=>{for(const item of items)layer.removeLayer(item);button.remove();current.delete(row.icao24);
           if(selected===row.icao24){detail.textContent='Position expired; awaiting fresh data.';selected=null;}

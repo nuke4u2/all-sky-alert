@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% from 'aircraft_summary.html' import route %}
 {% block refresh %}<meta http-equiv="refresh" content="300">{% endblock %}
 {% block scripts %}{% if aircraft_enabled %}<script src="{{ url_for('static', path='live.js') }}" defer></script>{% endif %}{% endblock %}
 {% macro cards(predictions) %}
@@ -6,7 +7,11 @@
 {% for p in predictions %}{% set e = p.candidate %}{% set a = p.assessment %}
 <article class="card">
   <div class="eyebrow">{{ 'Planetary observing' if e.detector == 'planetary' else 'Sunset · experimental' if e.detector == 'sunset' else e.kind|replace('.', ' ')|title }} <span class="badge">{{ p.state|replace('_', ' ')|title }}</span></div>
-  <h3><a href="/events/{{ e.id }}">{{ e.title }}</a></h3>
+  {% if e.detector == 'adsb' %}{% set plane = e.metadata|aircraft_summary %}
+  <p class="aircraft-airline">{{ plane.airline }}</p>
+  <h3 class="aircraft-type"><a href="/events/{{ e.id }}">{{ plane.type_name }}</a></h3>{{ route(plane) }}
+  <p class="muted">{{ plane.identity }}{% if plane.type_code %} · ICAO type {{ plane.type_code }}{% endif %} · recorded episode</p>
+  {% else %}<h3><a href="/events/{{ e.id }}">{{ e.title }}</a></h3>{% endif %}
   {% if p.inputs_expired %}<p class="muted">Recorded prediction inputs have expired; awaiting an update.</p>{% endif %}
   {% if e.metadata.safety %}<p class="safety">Solar viewing requires appropriate protection and front-aperture telescope filters. <a href="{{ e.metadata.safety.url|safe_url }}">NASA safety guidance</a></p>{% endif %}
   <p class="time">{{ e.peak|localtime }} <small>peak</small></p>
@@ -36,7 +41,7 @@
 <h2>Recent predictions</h2><p class="muted">Events that ended within the previous {{ recent_hours }} hours. History fills as the service runs.</p>
 {{ cards(recent) }}
 {% include 'digest_status.html' %}
-{% if inbox %}<details><summary>Recent alerts · {{ inbox|length }}</summary><ul>{% for alert in inbox %}<li><a href="/events/{{ alert.event_id }}">{{ alert.prediction.candidate.title }}</a> · {{ alert.stage }} · {{ alert.created_at|localtime }}</li>{% endfor %}</ul></details>{% endif %}
+{% if inbox %}<details><summary>Recent alerts · {{ inbox|length }}</summary><ul class="alert-list">{% for alert in inbox %}{% set event = alert.prediction.candidate %}<li>{% if event.detector == 'adsb' %}{% set plane = event.metadata|aircraft_summary %}<span class="aircraft-airline">{{ plane.airline }}</span><a class="aircraft-type" href="/events/{{ alert.event_id }}">{{ plane.type_name }}</a>{{ route(plane) }}<span class="muted">{{ plane.identity }} · recorded alert</span>{% else %}<a href="/events/{{ alert.event_id }}">{{ event.title }}</a>{% endif %} · {{ alert.stage }} · {{ alert.created_at|localtime }}</li>{% endfor %}</ul></details>{% endif %}
 <details open id="source-health"><summary>Sources & service health</summary>
 {% if overall.issues %}<ul>{% for issue in overall.issues %}<li>{{ issue }}</li>{% endfor %}</ul>{% endif %}
 <div class="table-wrap"><table><thead><tr><th>Source / used by</th><th>Status</th><th>Data and retrieval</th><th>Refresh / validity</th></tr></thead><tbody>
