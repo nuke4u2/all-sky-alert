@@ -1,6 +1,7 @@
 from dataclasses import asdict, replace
 from datetime import date, timedelta
 from concurrent.futures import ThreadPoolExecutor
+from threading import Event
 import re
 import sqlite3
 import tomllib
@@ -55,11 +56,68 @@ def test_below_threshold_still_local_and_daily(mail_config,store,event,condition
         service.tick(now)
         detail=store.detail(event.id,mail_config.observer.key)
         assert detail['alerts'] and not detail['deliveries']
-        assert not adapter.alerts
-        service.dispatch(now+timedelta(seconds=15))
         assert len(adapter.alerts)==1 and adapter.alerts[0]['kind']=='digest'
         assert adapter.alerts[0]['items'][0]['interest']==45
+        service.dispatch(now+timedelta(seconds=15))
+        assert len(adapter.alerts)==1
     finally:service.close()
+
+
+@pytest.mark.parametrize('lane', [None, 'slow'])
+@pytest.mark.parametrize('mode', ['daily_digest', 'weekly_digest'])
+def test_evaluation_sends_due_digest_before_returning(mail_config,store,event,conditions,lane,mode):
+    day=date(2026,10,25)
+    now=wall_time(day,mail_config.values['gmail'][mode]['time'],mail_config.observer.timezone)
+    start=now+timedelta(days=20) if mode=='weekly_digest' else now+timedelta(hours=2)
+    event=replace(event,observer_key=mail_config.observer.key,detector='eclipses',interest=95,
+        start=start,peak=start+timedelta(hours=1),end=start+timedelta(hours=2))
+    class Detector:
+        name='eclipses'
+        def detect(self,ctx):return DetectionBatch([event],{event.scope})
+    adapter=RecordingAdapter();adapter.name='gmail'
+    mail_config.values['gmail']['immediate']['enabled']=False
+    service=Service(mail_config,store=store,conditions=FakeConditions(conditions),
+        detectors=[Detector()],sources={},adapters=[adapter])
+    try:
+        service.tick(now,lane=lane)
+        assert [message['mode'] for message in adapter.alerts]==[mode]
+        assert store.digest(identity(mail_config,mode,day)[0])['status']=='SENT'
+        service.dispatch(now+timedelta(seconds=15))
+        assert len(adapter.alerts)==1
+    finally:service.close()
+
+
+def test_startup_waits_for_slow_worker_before_recording_empty_period(mail_config,store,event,conditions,monkeypatch):
+    now=parse('2026-10-27T11:00:00Z');day=date(2026,10,27)
+    event=replace(event,observer_key=mail_config.observer.key,interest=45,
+        start=now+timedelta(hours=2),peak=now+timedelta(hours=3),end=now+timedelta(hours=4))
+    class Detector:
+        name='planetary'
+        def detect(self,ctx):return DetectionBatch([event],{event.scope})
+    adapter=RecordingAdapter();adapter.name='gmail'
+    service=Service(mail_config,store=store,conditions=FakeConditions(conditions),
+        detectors=[Detector()],sources={},adapters=[adapter],clock=lambda:now)
+    release,dispatched,completed=Event(),Event(),Event()
+    original_tick,original_dispatch=service.tick,service.dispatch
+    def delayed_tick(*args,**kwargs):
+        assert release.wait(5)
+        original_tick(*args,**kwargs)
+        completed.set()
+    def observed_dispatch(*args,**kwargs):
+        original_dispatch(*args,**kwargs)
+        dispatched.set()
+    monkeypatch.setattr(service,'tick',delayed_tick)
+    monkeypatch.setattr(service,'dispatch',observed_dispatch)
+    # The delivery thread runs before the slow thread has entered Service.tick.
+    with TestClient(create_app(service,background=True),base_url='http://localhost'):
+        try:
+            assert dispatched.wait(3)
+            assert store.digest(identity(mail_config,'daily_digest',day)[0]) is None
+            release.set()
+            assert completed.wait(3)
+            service.dispatch(now+timedelta(seconds=15))
+            assert len(adapter.alerts)==1 and adapter.alerts[0]['mode']=='daily_digest'
+        finally:release.set()
 
 
 @pytest.mark.parametrize('interest,expected',[(84,False),(85,True),(95,True)])

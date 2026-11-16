@@ -212,6 +212,44 @@ SQLite may still use its normal WAL/shared-memory coordination. No database
 contents are changed. There is no digest send-test flag; the existing explicit
 test-email --send mechanism is unchanged and was not invoked.
 
+### Troubleshooting a working test email but missing automatic mail
+
+`test-email --send` calls the Gmail adapter directly. It checks global Gmail
+enablement and destination, but bypasses the notification-policy switch, mode
+switches, schedule, event selection and durable outbox. Its success alone does
+not establish that automatic mail is enabled or has eligible content.
+
+Inspect **Scheduled Gmail summaries** on Home/Settings or the read-only
+`/api/notifications` endpoint on the running service. The endpoint omits the
+recipient, credentials and message bodies. Check the active global notification
+and Gmail switches and the individual mode switches; older configurations that
+omit digest tables default both scheduled modes to disabled. Saved settings
+require a restart. The normal `serve` process must run during the scheduled slot
+or catch-up window; a one-shot `evaluate` only attempts the slot due at that time.
+
+| Latest period status | Meaning |
+| --- | --- |
+| EMPTY | No persisted events passed selection/policy at generation time; no email was attempted and this period will not replay. |
+| EXPIRED | The catch-up window ended before sending; missed periods are not backfilled. |
+| FAILED | A known pre-acceptance failure occurred; inspect the safe error and attempt count. Automatic retries stop after five attempts or expiry. |
+| UNKNOWN | Acceptance is uncertain; inspect Gmail before considering an explicit acknowledged retry. Never automatically replay it. |
+| SENT | Gmail accepted the request; check inbox filtering/delivery separately. |
+| CANCELED | The queued digest mode was disabled before delivery. |
+
+Defaults are 07:00 daily with four hours of catch-up and Sunday 18:00 weekly
+with 24 hours of catch-up, in the observer timezone. An empty summary is
+deliberately silent. Daily events must meet the existing quality/confidence and
+freshness policy; weekly currently includes only qualifying long-range eclipses.
+Immediate mail additionally requires interest >=85 by default, the selected
+family and a new eligible milestone. Enabling Gmail or lowering a threshold does
+not replay previously recorded milestones.
+
+Evaluation now publishes completion before dispatching due summaries, so
+one-shot runs do not defer their own digests until after exiting. Server startup
+also publishes the initial slow-worker barrier before scheduling delivery, so
+delivery cannot prematurely consume a period as EMPTY before discovery starts.
+Both paths have offline regression tests with fake Gmail adapters.
+
 ## Verification and limits
 
 - Baseline: 277 passed in 19.79s; final: 313 passed in 21.66s.

@@ -144,6 +144,9 @@ def create_app(service: Service, *, background: bool = True) -> FastAPI:
             stop = asyncio.Event()
             # Slow owns shared atmosphere even when only live detectors are enabled.
             lanes = ["slow", *sorted({service.lane(d) for d in service.detectors}-{"slow"}), "delivery"]
+            # Publish the startup barrier before scheduling either thread. The
+            # delivery thread may run before tick records its own worker health.
+            service.store.health('worker:slow', 'evaluating', service.clock(), 'Initial prediction evaluation queued')
             tasks = [asyncio.create_task(worker(stop, lane)) for lane in lanes]
             try:
                 yield

@@ -217,11 +217,13 @@ class Service:
             except Exception as exc:
                 errors += 1
                 self.store.health(f"detector:{detector.name}", "error", now, type(exc).__name__)
-        if deliver and self.config.values["notifications"]["enabled"]:
-            self.dispatch(now)
         self.store.prune(now, self.config.values["service"]["retention_days"])
         self.store.health(worker, "degraded" if errors else "ok", now,
                           f"Evaluation complete; {errors} component errors")
+        # Digest generation waits for evaluation to finish. Publish completion
+        # before dispatch so a one-shot evaluate can send its due summaries.
+        if deliver and self.config.values["notifications"]["enabled"]:
+            self.dispatch(now)
 
     def dispatch(self, now: datetime):
         if not self.config.values["notifications"]["enabled"] or not self._delivery_lock.acquire(blocking=False):
