@@ -31,6 +31,8 @@ the previous camera implementation or these instructions as hardware acceptance.
   unknown inputs never mean clear skies, and stale scientific inputs cannot alert.
 - Durable predictions/history, unique alert milestones, optional Gmail, source
   health and validated Settings. Routine web reads acquire no upstream data.
+- Notification and UI times use the configured observer timezone, including
+  daylight saving changes (for example EST/EDT for `America/New_York`).
 - Prediction lists default to event peak time, soonest upcoming first. The filter
   form also supports latest first, interest, observing quality, event type and
   overall priority; selection persists in the URL. Unknown quality remains last.

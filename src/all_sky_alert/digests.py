@@ -11,6 +11,7 @@ from .domain import Assessment, Candidate, Conditions, Metric, Source, iso, pars
 from .mail_policy import WEEKDAYS, selected
 from .policy import prediction_valid, qualified
 from .registry import DETECTORS
+from .presentation import local_time
 
 
 SCHEDULED = ('daily_digest', 'weekly_digest')
@@ -151,9 +152,8 @@ def render_digest(payload, recipient):
     title = 'Daily observing digest' if daily else 'Weekly long-range look-ahead'
     message['Subject'] = f"All Sky Alert · {title} · {payload['day']}"
     message['Message-ID'] = f"<{payload['id']}@all-sky-alert.local>"
-    zone = ZoneInfo(payload['timezone'])
     def local(stamp):
-        return parse(stamp).astimezone(zone).strftime('%a %b %d, %I:%M %p %Z')
+        return local_time(stamp, payload['timezone'])
     text = [title, date.fromisoformat(payload['day']).strftime('%A, %B %d, %Y'),
             f"Observer timezone: {payload['timezone']}",
             f"Window: {local(payload['window_start'])} — {local(payload['window_end'])}",

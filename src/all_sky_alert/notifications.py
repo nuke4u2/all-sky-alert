@@ -9,6 +9,7 @@ from pathlib import Path
 import httpx
 
 from .aircraft_display import aircraft_summary
+from .presentation import local_time
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
 
@@ -40,7 +41,7 @@ def authorize(client_secret: Path, token: Path):
     private_write(token, credentials.to_json())
 
 
-def render_message(alert: dict, recipient: str) -> EmailMessage:
+def render_message(alert: dict, recipient: str, timezone: str = "UTC") -> EmailMessage:
     if alert.get('kind') == 'digest':
         from .digests import render_digest
         return render_digest(alert,recipient)
@@ -56,8 +57,11 @@ def render_message(alert: dict, recipient: str) -> EmailMessage:
     quality = "unknown" if assessment["quality"] is None else f"{assessment['quality']}/100"
     text = ([f"Airline: {plane['airline']}", f"Plane type: {plane['type_name']}", f"Origin: {plane['origin']}", f"Destination: {plane['destination']}",
              f"Flight: {plane['identity']}", f"Reported ICAO type: {plane['type_code'] or 'unknown'}", ""] if plane else [])
-    text += [event["title"], f"Start (UTC): {event['start']}", f"Peak (UTC): {event['peak']}",
-            f"Intrinsic interest: {event['interest']}/100; observing quality: {quality}",
+    text += [event["title"], f"Observer timezone: {timezone}",
+            f"Start: {local_time(event['start'], timezone)}", f"Peak: {local_time(event['peak'], timezone)}"]
+    if event.get("end"):
+        text.append(f"End: {local_time(event['end'], timezone)}")
+    text += [f"Intrinsic interest: {event['interest']}/100; observing quality: {quality}",
             f"Occurrence confidence: {event['occurrence_confidence']}; assessment confidence: {assessment['confidence']}",
             f"Atmosphere: {assessment['conditions']['status']}", "", *event["reasons"], *assessment["reasons"], "", "Sources:"]
     text += [f"{s['name']}: {s['url']}" for s in event["sources"]]
@@ -80,8 +84,10 @@ def render_message(alert: dict, recipient: str) -> EmailMessage:
     seeing = assessment["conditions"].get("metrics", {}).get("seeing_index")
     if seeing:
         text += ["", f"Canadian seeing: {seeing['value']} (0 cloud masked; 1 very bad – 5 excellent)",
-                 f"Valid (UTC): {seeing['valid_at']}; model run: {seeing.get('issued_at')}; {seeing.get('status', 'fresh')}",
+                 f"Valid: {local_time(seeing['valid_at'], timezone)}; model run: {local_time(seeing.get('issued_at'), timezone)}; {seeing.get('status', 'fresh')}",
                  "ECCC data licence: https://eccc-msc.github.io/open-data/licence/readme_en/"]
+        if seeing.get('retrieved_at'):
+            text.append(f"Seeing retrieved: {local_time(seeing['retrieved_at'], timezone)}")
     message.set_content("\n".join(text))
     return message
 
@@ -89,8 +95,9 @@ def render_message(alert: dict, recipient: str) -> EmailMessage:
 class GmailAdapter:
     name = "gmail"
 
-    def __init__(self, token: Path, recipient: str, client: httpx.Client):
+    def __init__(self, token: Path, recipient: str, client: httpx.Client, timezone: str = "UTC"):
         self.token, self.recipient, self.client = token, recipient, client
+        self.timezone = timezone
 
     def send(self, alert: dict) -> str:
         try:
@@ -103,7 +110,7 @@ class GmailAdapter:
                 request = Request()
                 credentials.refresh(lambda *a, **kw: request(*a, **{**kw, "timeout": 20}))
                 private_write(self.token, credentials.to_json())
-            raw = base64.urlsafe_b64encode(render_message(alert, self.recipient).as_bytes()).decode()
+            raw = base64.urlsafe_b64encode(render_message(alert, self.recipient, self.timezone).as_bytes()).decode()
         except Exception:
             raise SafeDeliveryError("Gmail setup or token refresh failed") from None
         try:

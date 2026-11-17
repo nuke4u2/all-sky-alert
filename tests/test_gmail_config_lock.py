@@ -1,4 +1,6 @@
 import base64
+from email.parser import BytesParser
+from email.policy import default
 from dataclasses import replace
 from pathlib import Path
 
@@ -7,6 +9,7 @@ import pytest
 
 from all_sky_alert.cli import main, test_alert as build_test_alert
 from all_sky_alert.config import load
+from all_sky_alert.domain import parse
 from all_sky_alert.locking import ServiceLock
 from all_sky_alert.notifications import GmailAdapter, SafeDeliveryError, UncertainDeliveryError, private_write
 
@@ -18,6 +21,7 @@ def test_gmail_adapter_with_fake_oauth_and_transport(tmp_path, monkeypatch):
     monkeypatch.setattr(credentials.Credentials, "from_authorized_user_file", lambda *a: FakeCredentials())
     path = tmp_path / "token.json"
     path.write_text("{}")
+    monkeypatch.setattr('all_sky_alert.cli.utcnow', lambda: parse('2026-11-17T02:30:00Z'))
     def handler(request):
         import json
         assert request.headers["Authorization"] == "Bearer fake-oauth-token"
@@ -25,9 +29,11 @@ def test_gmail_adapter_with_fake_oauth_and_transport(tmp_path, monkeypatch):
         message = base64.urlsafe_b64decode(raw).decode()
         assert "recipient@example.org" in message
         assert "not a sky prediction" in message
+        body = BytesParser(policy=default).parsebytes(base64.urlsafe_b64decode(raw)).get_content()
+        assert 'Mon Nov 16 2026, 09:30 PM EST' in body and 'UTC' not in body
         return httpx.Response(200, json={"id": "accepted-id"})
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
-        adapter = GmailAdapter(path, "recipient@example.org", client)
+        adapter = GmailAdapter(path, "recipient@example.org", client, 'America/New_York')
         assert adapter.send(build_test_alert()) == "accepted-id"
     for status, error in [(401, SafeDeliveryError), (429, SafeDeliveryError), (503, UncertainDeliveryError)]:
         with httpx.Client(transport=httpx.MockTransport(lambda req: httpx.Response(status))) as client:

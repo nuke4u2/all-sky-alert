@@ -102,7 +102,7 @@ def main():
         if args.command == "test-email":
             alert = test_alert()
             if not args.send:
-                print(render_message(alert, gmail["destination"] or "configure-recipient@example.invalid").as_string())
+                print(render_message(alert, gmail["destination"] or "configure-recipient@example.invalid", config.observer.timezone).as_string())
                 print("Preview only. Add --send to explicitly send this test email.")
                 return
             if not gmail["enabled"] or not gmail["destination"]:
@@ -110,7 +110,7 @@ def main():
             import httpx
             # Serialize credential refresh with the running service.
             with ServiceLock(config.data_dir), httpx.Client(timeout=20) as client:
-                result = GmailAdapter(config.path(gmail["token"]), gmail["destination"], client).send(alert)
+                result = GmailAdapter(config.path(gmail["token"]), gmail["destination"], client, config.observer.timezone).send(alert)
                 print(f"Test email accepted by Gmail: {result}")
             return
         service = Service(config)

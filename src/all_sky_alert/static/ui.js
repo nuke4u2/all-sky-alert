@@ -1,4 +1,11 @@
 "use strict";
+function localTime(value) {
+  return value ? new Date(value).toLocaleString(undefined, {
+    timeZone: document.body.dataset.timezone,
+    year: 'numeric', month: 'short', day: 'numeric',
+    hour: 'numeric', minute: '2-digit', second: '2-digit', timeZoneName: 'short'
+  }) : 'Unknown';
+}
 for(const table of document.querySelectorAll('table')){
   const headings=[...table.querySelectorAll('thead th')].map(node=>node.textContent);
   for(const row of table.querySelectorAll('tbody tr'))[...row.children].forEach((cell,index)=>{cell.dataset.label=headings[index]||'';});
@@ -15,7 +22,7 @@ async function refreshHealth(){
     document.getElementById('overall-health').className='stoplight '+h.status;
     document.getElementById('health-label').textContent='● '+h.status.toUpperCase()+' · '+h.label;
     document.getElementById('health-summary').textContent=h.summary;
-    document.getElementById('health-time').textContent='Last evaluation: '+(h.evaluated_at?new Date(h.evaluated_at).toLocaleString():'waiting');
+    document.getElementById('health-time').textContent='Last evaluation: '+(h.evaluated_at?localTime(h.evaluated_at):'waiting');
   }catch(_){
     document.getElementById('overall-health').className='stoplight red';
     document.getElementById('health-label').textContent='● RED · Health update unavailable';

@@ -8,7 +8,6 @@ import secrets
 from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import urlparse
-from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
@@ -16,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from .domain import parse
+from .presentation import local_time, local_text
 from .locking import ServiceLock
 from .service import Service
 from .network import LANMiddleware,ExactHostMiddleware
@@ -164,10 +164,11 @@ def create_app(service: Service, *, background: bool = True) -> FastAPI:
     directory = Path(__file__).parent
     app.mount("/static", StaticFiles(directory=directory / "static"), name="static")
     templates = Jinja2Templates(directory=directory / "templates")
-    templates.env.filters["localtime"] = lambda value: parse(value).astimezone(ZoneInfo(config.observer.timezone)).strftime("%a %b %d %Y, %I:%M %p %Z")
+    templates.env.filters["localtime"] = lambda value: local_time(value, config.observer.timezone)
+    templates.env.filters["localtext"] = lambda value: local_text(value, config.observer.timezone)
     templates.env.filters["safe_url"] = safe_url
     templates.env.filters["aircraft_summary"] = aircraft_summary
-    templates.env.filters["precisetime"] = lambda value: parse(value).astimezone(ZoneInfo(config.observer.timezone)).strftime("%Y-%m-%d %H:%M:%S.%f %Z")
+    templates.env.filters["precisetime"] = lambda value: local_time(value, config.observer.timezone, precise=True)
 
     @app.middleware("http")
     async def headers(request, call_next):

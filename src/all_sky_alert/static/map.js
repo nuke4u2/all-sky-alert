@@ -21,7 +21,7 @@
     add(detail,'p',g.from_direction+(g.toward_direction?' → '+g.toward_direction:'; motion unknown'));
     add(detail,'p','Observed position '+row.position_age_seconds+' seconds old; '+row.position_kind+'. Ground track '+(row.track_deg===null?'unknown':row.track_deg+'°')+'.');
     add(detail,'p',summary.type_method+(summary.type_source_name?' · '+summary.type_source_name:'')).className='muted';
-    if(meta)add(detail,'p','Metadata: '+meta.source_name+' · '+meta.age_seconds+' seconds old. '+(meta.updated_at||''));
+    if(meta)add(detail,'p','Metadata: '+meta.source_name+' · '+meta.age_seconds+' seconds old. '+(meta.updated_at?localTime(meta.updated_at):'Unknown'));
     if(summary.airline_source_name)add(detail,'p','Airline source: '+summary.airline_source_name+'.').className='muted';
     if(summary.route_source_name)add(detail,'p','Route source: '+summary.route_source_name+'. Reported endpoints; the dashed line is not this route.');
     add(detail,'p','Dashed projection is a short estimate; turns/climbs and visual detection are unresolved.');

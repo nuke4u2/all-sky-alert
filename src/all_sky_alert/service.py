@@ -66,7 +66,8 @@ class Service:
             self.adapters = {a.name: a for a in adapters}
         else:
             gmail = config.values["gmail"]
-            self.adapters = {"gmail": GmailAdapter(config.path(gmail["token"]), gmail["destination"], self.client)} if gmail["enabled"] else {}
+            self.adapters = {"gmail": GmailAdapter(config.path(gmail["token"]), gmail["destination"], self.client,
+                                                  config.observer.timezone)} if gmail["enabled"] else {}
 
     @property
     def detector_names(self) -> list[str]:

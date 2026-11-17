@@ -5,7 +5,7 @@
   const image = byId('camera-preview');
   const result = byId('camera-result');
   let state = null, pending = null, focusInitialized = false;
-  const formatTime = value => value ? new Date(value).toLocaleString(undefined, {timeZone: root.dataset.timezone}) : 'Unknown';
+  const formatTime = localTime;
   function interval() {
     const seconds = Number(byId('capture-interval').value) * Number(byId('interval-unit').value);
     if (!Number.isFinite(seconds) || seconds < 10 || seconds > 604800) throw Error('Use an interval between 10 seconds and 7 days.');
