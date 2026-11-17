@@ -240,8 +240,8 @@ is needed on Windows or NAS. See [Canadian seeing](canadian-seeing.md).
 ## UI, delivery and deployment
 
 Read-only routes render separate Now/upcoming sections and recent history with
-URL-selected presentation sorting. Default is peak time descending (newest first);
-interest, quality, event type and combined priority are also available. Unknown
+URL-selected presentation sorting. Default is peak time ascending (soonest
+upcoming first); interest, quality, event type and combined priority are also available. Unknown
 quality sorts last. This read-time ordering never changes stored scores, detector
 execution, digest ordering or alert policy. Recent history includes
 events ending in the configurable previous two hours. Event detail exposes

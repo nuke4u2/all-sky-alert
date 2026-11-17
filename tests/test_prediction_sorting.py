@@ -41,7 +41,8 @@ def test_home_api_sort_recent_filters_and_validation(config,store,event,conditio
     service=Service(config,store=store,conditions=FakeConditions(conditions),detectors=[Existing()],
         sources={},adapters=[],clock=lambda:now)
     try:
-        for suffix,offset,interest in [('early',1,95),('late',3,50),('recent-early',-2,95),('recent-late',-1,50)]:
+        for suffix,offset,interest in [('early',1,95),('late',3,50),('distant',24*400,100),
+                                      ('recent-early',-2,95),('recent-late',-1,50)]:
             start=now+timedelta(hours=offset)
             candidate=replace(event,id=suffix,title=suffix,start=start,peak=start+timedelta(minutes=10),
                 end=start+timedelta(minutes=20),interest=interest)
@@ -51,17 +52,22 @@ def test_home_api_sort_recent_filters_and_validation(config,store,event,conditio
         before=service.upcoming(now)
         with TestClient(create_app(service,background=False),base_url='http://localhost') as client:
             data=client.get('/api/predictions').json()
-            assert [p['candidate']['id'] for p in data['upcoming']]==['late','early']
-            assert [p['candidate']['id'] for p in data['recent']]==['recent-late','recent-early']
+            assert [p['candidate']['id'] for p in data['upcoming']]==['early','late','distant']
+            assert [p['candidate']['id'] for p in data['recent']]==['recent-early','recent-late']
             home=client.get('/').text
-            assert '<option value="time_desc" selected>' in home
-            assert home.index('href="/events/late"')<home.index('href="/events/early"')
+            assert '<option value="time_asc" selected>Event time: soonest first</option>' in home
+            assert home.index('href="/events/early"')<home.index('href="/events/late"')<home.index('href="/events/distant"')
             response=client.get('/?filter=1&types=planetary&sort=interest_desc')
             assert response.status_code==200
             assert '<option value="interest_desc" selected>' in response.text
-            assert response.text.index('href="/events/early"')<response.text.index('href="/events/late"')
-            for path in ('/api/predictions?sort=time_asc','/api/predictions?sort=interest_desc'):
-                assert [p['candidate']['id'] for p in client.get(path).json()['upcoming']]==['early','late']
+            assert response.text.index('href="/events/distant"')<response.text.index('href="/events/early"')<response.text.index('href="/events/late"')
+            for order,expected in [('time_asc',['early','late','distant']),
+                                   ('time_desc',['distant','late','early']),
+                                   ('interest_desc',['distant','early','late'])]:
+                assert [p['candidate']['id'] for p in client.get('/api/predictions?sort='+order).json()['upcoming']]==expected
+            reverse=client.get('/?sort=time_desc').text
+            assert '<option value="time_desc" selected>Event time: latest first</option>' in reverse
+            assert reverse.index('href="/events/distant"')<reverse.index('href="/events/late"')<reverse.index('href="/events/early"')
             assert not client.get('/api/predictions?filter=1&sort=interest_desc').json()['upcoming']
             for path in ('/','/api/predictions','/api/live'):
                 assert client.get(path+'?sort=invalid').status_code==422

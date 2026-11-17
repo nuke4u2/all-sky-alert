@@ -28,8 +28,8 @@ from .camera.manager import CameraUnavailable, CameraBusy
 
 
 SORT_CHOICES = {
-    'time_desc': 'Event time: newest first',
-    'time_asc': 'Event time: oldest first',
+    'time_asc': 'Event time: soonest first',
+    'time_desc': 'Event time: latest first',
     'interest_desc': 'Interest: highest first',
     'interest_asc': 'Interest: lowest first',
     'quality_desc': 'Observing quality: highest first',
@@ -114,7 +114,7 @@ def create_app(service: Service, *, background: bool = True) -> FastAPI:
         return selected
 
     def sort_selection(request):
-        order=request.query_params.get('sort','time_desc')
+        order=request.query_params.get('sort','time_asc')
         if order not in SORT_CHOICES:raise HTTPException(422,'Unknown prediction sort order')
         return order
 

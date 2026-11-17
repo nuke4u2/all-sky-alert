@@ -11,7 +11,7 @@ async function refreshAircraft() {
     return node;
   };
   try {
-    const sort = new URLSearchParams(window.location.search).get("sort") || "time_desc";
+    const sort = new URLSearchParams(window.location.search).get("sort") || "time_asc";
     const response = await fetch("/api/live?" + new URLSearchParams({sort}), {cache: "no-store", signal: AbortSignal.timeout(5000)});
     if (!response.ok) throw new Error("Unavailable");
     const data = await response.json();
