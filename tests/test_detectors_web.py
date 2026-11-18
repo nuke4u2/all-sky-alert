@@ -76,7 +76,7 @@ def test_html_json_details_health_escape_and_hosts(config, store, weather, now):
         with TestClient(create_app(service, background=False), base_url="http://localhost") as client:
             home = client.get("/")
             assert home.status_code == 200
-            assert "<h2>Upcoming</h2>" in home.text and "<h2>Now</h2>" in home.text
+            assert "<h2>Now &amp; upcoming</h2>" in home.text
             assert "Recent predictions" in home.text and "service health" in home.text
             assert "Open-Meteo" in home.text
             data = client.get("/api/predictions").json()

@@ -41,15 +41,9 @@ html{scroll-behavior:smooth}main,header,footer,nav{min-width:0}body{overflow-wra
 .outlook #live-aircraft .aircraft-route{padding:8px 0;gap:10px}
 .outlook #live-aircraft .aircraft-route strong{font-size:1rem}
 .outlook #live-aircraft p{margin:6px 0}
-.outlook .prediction-columns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:start}
-.outlook .prediction-columns>section{min-width:0}
-.outlook .upcoming-predictions{grid-column:span 2}
-.outlook .prediction-columns h2{margin-top:0}
-.outlook .prediction-columns>section>.muted{font-size:.82rem;min-height:2.7em;margin:6px 0}
+.outlook .outlook-predictions h2{margin-top:0}
+.outlook .outlook-predictions>.muted{font-size:.82rem;margin:6px 0}
 .outlook .cards{grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));align-items:start;margin:12px 0}
 .outlook .card{padding:18px}
 .outlook .empty{padding:12px;margin:0}
-.outlook .prediction-columns.no-active{grid-template-columns:minmax(0,1fr)}
-.outlook .no-active .upcoming-predictions{order:-1;grid-column:auto}
-@media(max-width:1000px){.outlook .prediction-columns{grid-template-columns:minmax(0,1fr)}.outlook .upcoming-predictions{order:-1;grid-column:auto}}
 @media(max-width:650px){.outlook .intro h1{font-size:1.4rem}.outlook .stoplight{gap:2px 10px}.outlook #health-summary{flex-basis:100%}.outlook-tools{gap:8px}.outlook .filters{flex-basis:100%}.outlook .aircraft-inline{flex-basis:100%}.outlook .choices label{flex-basis:auto}.outlook .card{padding:16px}}

@@ -34,21 +34,15 @@
 <label class="sort-control" for="prediction-sort">Sort by <select id="prediction-sort" name="sort">{% for value,label in sort_choices.items() %}<option value="{{ value }}" {% if value==sort_order %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
 <details class="family-filters"><summary>Event types · {{ selected_types|length }}/{{ filter_choices|length }}</summary>
 <fieldset><legend>Filter predictions</legend><div class="choices">{% for name,spec in filter_choices.items() %}<label><input type="checkbox" name="types" value="{{ name }}" {% if name in selected_types %}checked{% endif %}>{{ spec.label or name }}</label>{% endfor %}</div><div class="actions"><button type="button" data-selection="all">All</button><button type="button" data-selection="none">None</button><button type="submit">Apply filters and sorting</button></div></fieldset>
-<p class="muted">Sorting applies to Now, Upcoming and Recent; family filters apply to Now and Upcoming. Chronological order uses the peak time shown on each card; unknown quality stays last.</p></details>
+<p class="muted">Sorting applies within the active and upcoming groups and to Recent; family filters apply to active and upcoming events. Chronological order uses the peak time shown on each card; unknown quality stays last.</p></details>
 <button type="submit">Apply</button>
 </form>
 {% if aircraft_enabled %}<details class="aircraft-inline"><summary>Aircraft now & approaching <span class="muted" id="live-count">· loading</span></summary><p class="muted" id="live-status">Loading fresh recorded positions; updates every 15 seconds.</p><div id="live-aircraft" class="cards" aria-live="polite"></div>{% if map_enabled %}<a href="/aircraft">Open live aircraft map →</a>{% endif %}<noscript><p>Enable JavaScript for live aircraft updates, or open <a href="/api/live">live aircraft JSON</a>.</p></noscript></details>{% elif map_enabled %}<a class="button" href="/aircraft">Live aircraft map →</a>{% endif %}
 </div>
-<div class="prediction-columns{% if not active %} no-active{% endif %}">
-<section class="now-predictions" aria-label="Now">
-<h2>Now</h2><p class="muted">Active predicted windows. Aurora forecasts are model opportunities, not confirmed sightings.</p>
-{{ cards(active) }}
+<section class="outlook-predictions" aria-label="Now and upcoming">
+<h2>Now &amp; upcoming</h2><p class="muted">Active windows first. {{ sort_label }} within each group. Open an event for its full window and reasoning. Aurora forecasts are model opportunities, not confirmed sightings.</p>
+{{ cards(active + (upcoming|rejectattr('candidate.detector', 'equalto', 'adsb')|list)) }}
 </section>
-<section class="upcoming-predictions" aria-label="Upcoming">
-<h2>Upcoming</h2><p class="muted">{{ sort_label }}. Open an event for its full window and reasoning.</p>
-{{ cards(upcoming|rejectattr('candidate.detector', 'equalto', 'adsb')|list) }}
-</section>
-</div>
 <h2>Recent predictions</h2><p class="muted">Events that ended within the previous {{ recent_hours }} hours. History fills as the service runs.</p>
 {{ cards(recent) }}
 {% include 'digest_status.html' %}
