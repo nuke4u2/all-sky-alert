@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% from 'aircraft_summary.html' import route %}
+{% block body_class %}outlook{% endblock %}
 {% block refresh %}<meta http-equiv="refresh" content="300">{% endblock %}
 {% block scripts %}{% if aircraft_enabled %}<script src="{{ url_for('static', path='live.js') }}" defer></script>{% endif %}{% endblock %}
 {% macro cards(predictions) %}
@@ -26,23 +27,33 @@
 </div>
 {% endmacro %}
 {% block content %}
-<div class="intro"><p class="eyebrow">Your observing outlook</p><h1>What’s worth looking up for?</h1><p>Event importance and observing conditions, kept separate so the sky’s big moments stay visible.</p></div>
-<form method="get" class="filters" id="event-filters"><fieldset><legend>Filter and sort predictions</legend><input type="hidden" name="filter" value="1">
-<label class="control numeric" for="prediction-sort">Sort by<select id="prediction-sort" name="sort">{% for value,label in sort_choices.items() %}<option value="{{ value }}" {% if value==sort_order %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
-<p class="muted">Sorting applies to Now, Upcoming and Recent; family filters apply to Now and Upcoming. Chronological order uses the peak time shown on each card; unknown quality stays last.</p>
-<div class="choices">{% for name,spec in filter_choices.items() %}<label><input type="checkbox" name="types" value="{{ name }}" {% if name in selected_types %}checked{% endif %}>{{ spec.label or name }}</label>{% endfor %}</div><div class="actions"><button type="button" data-selection="all">All</button><button type="button" data-selection="none">None</button><button type="submit">Apply filters and sorting</button></div></fieldset></form>
-{% if map_enabled %}<p><a class="button" href="/aircraft">Open live aircraft map →</a></p>{% endif %}
-<h2>Now</h2><p class="muted">Active predicted windows. Aurora forecasts are model opportunities; they are not confirmed sightings.</p>
-{% if aircraft_enabled %}<section aria-label="Live aircraft"><h3>Aircraft now & approaching</h3><p class="muted" id="live-status">Loading fresh recorded positions; updates every 15 seconds.</p><div id="live-aircraft" class="cards" aria-live="polite"></div><noscript><p>Enable JavaScript for live aircraft updates, or open <a href="/api/live">live aircraft JSON</a>.</p></noscript></section>{% endif %}
-<p class="muted">Scores and confidence are heuristic ratings, not calibrated probabilities of a sighting.</p>
+<div class="intro"><h1>Your observing outlook</h1><p>Event importance and observing conditions, kept separate. Scores and confidence are heuristic ratings, not calibrated probabilities of a sighting.</p></div>
+<div class="outlook-tools">
+<form method="get" class="filters" id="event-filters" aria-label="Filter and sort predictions">
+<input type="hidden" name="filter" value="1">
+<label class="sort-control" for="prediction-sort">Sort by <select id="prediction-sort" name="sort">{% for value,label in sort_choices.items() %}<option value="{{ value }}" {% if value==sort_order %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+<details class="family-filters"><summary>Event types · {{ selected_types|length }}/{{ filter_choices|length }}</summary>
+<fieldset><legend>Filter predictions</legend><div class="choices">{% for name,spec in filter_choices.items() %}<label><input type="checkbox" name="types" value="{{ name }}" {% if name in selected_types %}checked{% endif %}>{{ spec.label or name }}</label>{% endfor %}</div><div class="actions"><button type="button" data-selection="all">All</button><button type="button" data-selection="none">None</button><button type="submit">Apply filters and sorting</button></div></fieldset>
+<p class="muted">Sorting applies to Now, Upcoming and Recent; family filters apply to Now and Upcoming. Chronological order uses the peak time shown on each card; unknown quality stays last.</p></details>
+<button type="submit">Apply</button>
+</form>
+{% if aircraft_enabled %}<details class="aircraft-inline"><summary>Aircraft now & approaching <span class="muted" id="live-count">· loading</span></summary><p class="muted" id="live-status">Loading fresh recorded positions; updates every 15 seconds.</p><div id="live-aircraft" class="cards" aria-live="polite"></div>{% if map_enabled %}<a href="/aircraft">Open live aircraft map →</a>{% endif %}<noscript><p>Enable JavaScript for live aircraft updates, or open <a href="/api/live">live aircraft JSON</a>.</p></noscript></details>{% elif map_enabled %}<a class="button" href="/aircraft">Live aircraft map →</a>{% endif %}
+</div>
+<div class="prediction-columns{% if not active %} no-active{% endif %}">
+<section class="now-predictions" aria-label="Now">
+<h2>Now</h2><p class="muted">Active predicted windows. Aurora forecasts are model opportunities, not confirmed sightings.</p>
 {{ cards(active) }}
+</section>
+<section class="upcoming-predictions" aria-label="Upcoming">
 <h2>Upcoming</h2><p class="muted">{{ sort_label }}. Open an event for its full window and reasoning.</p>
 {{ cards(upcoming|rejectattr('candidate.detector', 'equalto', 'adsb')|list) }}
+</section>
+</div>
 <h2>Recent predictions</h2><p class="muted">Events that ended within the previous {{ recent_hours }} hours. History fills as the service runs.</p>
 {{ cards(recent) }}
 {% include 'digest_status.html' %}
 {% if inbox %}<details><summary>Recent alerts · {{ inbox|length }}</summary><ul class="alert-list">{% for alert in inbox %}{% set event = alert.prediction.candidate %}<li>{% if event.detector == 'adsb' %}{% set plane = event.metadata|aircraft_summary %}<span class="aircraft-airline">{{ plane.airline }}</span><a class="aircraft-type" href="/events/{{ alert.event_id }}">{{ plane.type_name }}</a>{{ route(plane) }}<span class="muted">{{ plane.identity }} · recorded alert</span>{% else %}<a href="/events/{{ alert.event_id }}">{{ event.title }}</a>{% endif %} · {{ alert.stage }} · {{ alert.created_at|localtime }}</li>{% endfor %}</ul></details>{% endif %}
-<details open id="source-health"><summary>Sources & service health</summary>
+<details id="source-health"><summary>Sources & service health</summary>
 {% if overall.issues %}<ul>{% for issue in overall.issues %}<li>{{ issue }}</li>{% endfor %}</ul>{% endif %}
 <div class="table-wrap"><table><thead><tr><th>Source / used by</th><th>Status</th><th>Data and retrieval</th><th>Refresh / validity</th></tr></thead><tbody>
 {% for s in sources %}<tr><td>{{ s.name }}<br><small>{{ s.kind }} · {{ s.consumers|join(', ') }}</small></td><td>{{ s.status }}{% if s.cached %}<br><small>Cached</small>{% endif %}{% if s.error %}<br>{{ s.error }}{% endif %}</td>

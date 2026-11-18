@@ -4,6 +4,10 @@ async function refreshAircraft() {
   const root = document.getElementById("live-aircraft");
   if (!root) return;
   const status = document.getElementById("live-status");
+  const count = document.getElementById("live-count");
+  const updateCount = () => {
+    if (count) count.textContent = "· " + root.querySelectorAll("article").length + " fresh";
+  };
   const add = (parent, tag, value) => {
     const node = document.createElement(tag);
     node.textContent = value;
@@ -21,7 +25,7 @@ async function refreshAircraft() {
       const card = add(root, "article", "");
       card.className = "card aircraft-card";
       const remaining = Date.parse(aircraft.valid_until) - Date.parse(data.checked_at);
-      setTimeout(() => card.remove(), Math.max(0, remaining - (performance.now() - received)));
+      setTimeout(() => {card.remove(); updateCount();}, Math.max(0, remaining - (performance.now() - received)));
       const summary = aircraft.aircraft_summary;
       add(card, "p", "Aircraft · " + aircraft.track_state.toLowerCase()).className = "eyebrow";
       add(card, "p", summary.airline).className = "aircraft-airline";
@@ -45,9 +49,11 @@ async function refreshAircraft() {
       if (summary.airline_source_name) add(sources, "p", "Airline source: " + summary.airline_source_name);
     }
     if (!data.aircraft.length) add(root, "p", "No fresh qualifying aircraft positions. Coverage or source gaps can also cause this.");
+    updateCount();
     status.textContent = "Updates every 15 seconds. " + data.note;
   } catch (_) {
     root.replaceChildren(); // A stalled browser/provider cannot leave 'overhead now' visible.
+    if (count) count.textContent = "· unavailable";
     status.textContent = "Live view unavailable. Recorded predictions remain in event history.";
   } finally {
     setTimeout(refreshAircraft, 15000);

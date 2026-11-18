@@ -11,6 +11,17 @@ for(const table of document.querySelectorAll('table')){
   for(const row of table.querySelectorAll('tbody tr'))[...row.children].forEach((cell,index)=>{cell.dataset.label=headings[index]||'';});
 }
 const filters=document.getElementById('event-filters');
+function revealHealth(){
+  if(window.location.hash==='#source-health'){
+    const health=document.getElementById('source-health');
+    if(health){health.open=true;health.scrollIntoView();}
+  }
+}
+window.addEventListener('hashchange',revealHealth);
+document.addEventListener('click',event=>{
+  if(window.location.hash==='#source-health'&&event.target.closest('a[href="/#source-health"]'))revealHealth();
+});
+revealHealth();
 if(filters)for(const button of filters.querySelectorAll('[data-selection]'))button.addEventListener('click',()=>{
   for(const box of filters.querySelectorAll('[name=types]'))box.checked=button.dataset.selection==='all';
 });

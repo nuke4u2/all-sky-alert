@@ -11,3 +11,45 @@ html{scroll-behavior:smooth}main,header,footer,nav{min-width:0}body{overflow-wra
 .camera-preview[hidden] { display: none; }
 #camera-status { display: grid; grid-template-columns: minmax(7rem, 1fr) minmax(0, 2fr); gap: .4rem 1rem; }
 #camera-status dd { margin: 0; overflow-wrap: anywhere; }
+/* Keep predictions visible above supporting controls on the outlook page. */
+.outlook main{padding-top:12px}
+.outlook .stoplight{flex-direction:row;align-items:center;flex-wrap:wrap;gap:4px 16px;padding:8px 12px;margin-bottom:14px;font-size:.85rem;border-left-width:4px}
+.outlook #health-summary{flex:1 1 240px}
+.outlook #health-time{font-size:.75rem}
+.outlook .intro{max-width:none;padding:0}
+.outlook .intro h1{font-size:1.65rem;margin:0 0 4px}
+.outlook .intro p{font-size:.85rem;margin:0 0 14px}
+.outlook-tools{display:flex;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:18px}
+.outlook .filters{display:flex;align-items:flex-start;flex-wrap:wrap;gap:8px;flex:2 1 530px;min-width:0}
+.outlook .sort-control{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:.85rem;min-width:0}
+.outlook .sort-control select{font-size:.85rem;max-width:100%}
+.outlook-tools button,.outlook-tools .button{font-size:.85rem;padding:6px 12px}
+.outlook-tools details{margin:0;padding:0;min-width:0;border-radius:8px;font-size:.85rem}
+.outlook-tools summary{padding:10px 12px;min-height:44px;font-weight:500}
+.outlook-tools details[open]{flex-basis:100%}
+.outlook-tools details[open]>:not(summary){margin:10px 12px}
+.outlook .family-filters[open]{order:3}
+.outlook .family-filters fieldset{padding:10px}
+.outlook .choices{gap:4px}
+.outlook .choices label{flex:0 1 auto;gap:8px;min-height:44px;padding:4px 8px}
+.outlook .choices input{width:18px;height:18px;flex-basis:18px}
+.outlook .aircraft-inline{flex:1 1 290px}
+.outlook .aircraft-inline[open]{flex-basis:100%}
+.outlook .aircraft-inline #live-aircraft{max-height:320px;overflow:auto;overscroll-behavior:contain}
+.outlook #live-aircraft .card{padding:12px;font-size:.82rem}
+.outlook #live-aircraft .aircraft-airline,.outlook #live-aircraft .aircraft-type{font-size:1rem;margin:4px 0}
+.outlook #live-aircraft .aircraft-route{padding:8px 0;gap:10px}
+.outlook #live-aircraft .aircraft-route strong{font-size:1rem}
+.outlook #live-aircraft p{margin:6px 0}
+.outlook .prediction-columns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:start}
+.outlook .prediction-columns>section{min-width:0}
+.outlook .upcoming-predictions{grid-column:span 2}
+.outlook .prediction-columns h2{margin-top:0}
+.outlook .prediction-columns>section>.muted{font-size:.82rem;min-height:2.7em;margin:6px 0}
+.outlook .cards{grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));align-items:start;margin:12px 0}
+.outlook .card{padding:18px}
+.outlook .empty{padding:12px;margin:0}
+.outlook .prediction-columns.no-active{grid-template-columns:minmax(0,1fr)}
+.outlook .no-active .upcoming-predictions{order:-1;grid-column:auto}
+@media(max-width:1000px){.outlook .prediction-columns{grid-template-columns:minmax(0,1fr)}.outlook .upcoming-predictions{order:-1;grid-column:auto}}
+@media(max-width:650px){.outlook .intro h1{font-size:1.4rem}.outlook .stoplight{gap:2px 10px}.outlook #health-summary{flex-basis:100%}.outlook-tools{gap:8px}.outlook .filters{flex-basis:100%}.outlook .aircraft-inline{flex-basis:100%}.outlook .choices label{flex-basis:auto}.outlook .card{padding:16px}}
