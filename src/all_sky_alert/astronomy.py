@@ -36,6 +36,38 @@ class Astronomy:
     def moon_illumination(self, when: datetime) -> float:
         return engine.Illumination(engine.Body.Moon, self.time(when)).phase_fraction
 
+    @lru_cache(maxsize=128)
+    def solar_longitude_peak(self, year: int, longitude_deg: float) -> datetime:
+        """Annual nominal shower maximum at an IMO J2000 solar longitude.
+
+        SearchSunLongitude uses equinox of date, so only use it to bracket the
+        root. Solve in fixed J2000 ecliptic coordinates, as required by IMO.
+        Minute precision is numerical resolution, not shower timing accuracy.
+        """
+        guess = engine.SearchSunLongitude(longitude_deg, self.time(datetime(year, 1, 1, tzinfo=UTC)), 366)
+        if guess is None:
+            raise ValueError("Solar longitude not found")
+        center = self.to_datetime(guess)
+        lo, hi = center-timedelta(days=2), center+timedelta(days=2)
+        rotation = engine.Rotation_EQJ_ECL()
+        while (hi-lo).total_seconds() > 60:
+            mid = lo+(hi-lo)/2
+            sun = engine.GeoVector(engine.Body.Sun, self.time(mid), False)
+            longitude = engine.SphereFromVector(engine.RotateVector(rotation, sun)).lon
+            if (longitude-longitude_deg+180) % 360-180 < 0:
+                lo = mid
+            else:
+                hi = mid
+        return lo+(hi-lo)/2
+
+    def radiant_position(self, ra_deg: float, dec_deg: float, when: datetime, observer: Observer) -> dict:
+        """Fixed catalog J2000 radiant precessed/nutated to the observation date."""
+        time = self.time(when)
+        vector = engine.VectorFromSphere(engine.Spherical(dec_deg, ra_deg, 1), time)
+        equatorial = engine.EquatorFromVector(engine.RotateVector(engine.Rotation_EQJ_EQD(time), vector))
+        horizontal = engine.Horizon(time, self.site(observer), equatorial.ra, equatorial.dec, engine.Refraction.Airless)
+        return {"altitude_deg": horizontal.altitude, "azimuth_deg": horizontal.azimuth}
+
     @staticmethod
     def time(when):
         return engine.Time(iso(when).replace("+00:00", "Z"))

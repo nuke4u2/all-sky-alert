@@ -9,6 +9,7 @@ to catch misspelled settings. Restart after edits. Tables isolate concerns:
 | service | data_dir, evaluation interval, recent_hours, prediction_days, retention_days, allowed_hosts |
 | detectors.planetary | enabled, geometry interval_seconds, bodies, minimum altitude, maximum Sun altitude, aperture_mm |
 | detectors.sunset | enabled, geometry interval_seconds |
+| detectors.meteors | enabled, interval_seconds, minimum_altitude_deg (radiant), maximum_sun_altitude_deg; [methods](meteors.md) |
 | detectors.eclipses | enabled, horizon_days, interval_seconds, solar/lunar/penumbral, minimum_altitude_deg |
 | detectors.aurora | enabled, interval_seconds, minimum_intensity, minimum_horizon_elevation_deg, maximum_sun_altitude_deg, emission height range |
 | providers.swpc | enabled, cache_seconds, stale_after_minutes, invalid_after_minutes |

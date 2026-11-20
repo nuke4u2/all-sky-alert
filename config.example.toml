@@ -67,6 +67,14 @@ grs_source_url = "https://skyandtelescope.org/stargazing-and-observing/interacti
 enabled = true
 interval_seconds = 86400
 
+# Known annual showers, three local observing nights around the nominal maximum.
+# Older configs default this module off; enable in Settings and restart.
+[detectors.meteors]
+enabled = true
+interval_seconds = 21600
+minimum_altitude_deg = 15 # Radiant elevation; no local terrain mask.
+maximum_sun_altitude_deg = -12
+
 [detectors.eclipses]
 enabled = true
 horizon_days = 730 # Independent of the short planetary horizon.

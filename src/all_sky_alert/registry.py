@@ -14,6 +14,7 @@ from .satellites import SatellitePassDetector, ISSTransitDetector
 from .aircraft import AircraftDetector
 from .crystals import SkyCrystalDetector
 from .jupiter import JupiterDetector
+from .meteors import MeteorShowerDetector
 
 
 @dataclass(frozen=True)
@@ -34,6 +35,9 @@ class DetectorRegistration:
 
 
 DETECTORS = {
+    "meteors": DetectorRegistration(MeteorShowerDetector, MeteorShowerDetector.defaults,
+                                    MeteorShowerDetector.validate_settings, profiles=("meteors",),
+                                    label="Meteor showers (three peak nights)"),
     "jupiter": DetectorRegistration(JupiterDetector, JupiterDetector.defaults, JupiterDetector.validate_settings,
                                     profiles=("planetary",), label="Jupiter moons / Great Red Spot"),
     "planetary": DetectorRegistration(PlanetaryDetector, PlanetaryDetector.defaults, PlanetaryDetector.validate_settings, profiles=("planetary",)),

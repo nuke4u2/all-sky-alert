@@ -4,6 +4,7 @@ from math import sin, radians
 from typing import Callable
 
 from .domain import Assessment, Candidate, Conditions, Metric, iso, parse
+from .meteors import geometry_suitability
 
 
 def deadline(*values):
@@ -102,7 +103,27 @@ class Profile:
         return self.evaluate(event, conditions)
 
 
+def meteors(event: Candidate, conditions: Conditions) -> Assessment:
+    cloud = conditions.metrics.get("cloud_total")
+    geometry = geometry_suitability(event.geometry)
+    components = {"radiant / moonlight suitability": round(100*geometry, 1),
+                  "cloud clearance": round(100-cloud.value, 1) if cloud else None,
+                  "Moon illumination": round(100*event.geometry["moon_illumination"], 1)}
+    reasons = ["Cloud forecast is assessed at this night's representative observing time; it is not a whole-night guarantee",
+               "Radiant altitude and an illuminated Moon above the horizon affect visual meteor visibility",
+               "Uncalibrated opportunity score, not a meteor count or probability; intrinsic shower interest stays separate"]
+    usable = conditions.status == "fresh" and cloud is not None and cloud.status == "fresh"
+    expires = deadline(conditions.valid_until, cloud.valid_until if cloud else None)
+    if cloud is None:
+        return Assessment(None, 0, components, reasons+["Cloud forecast unavailable or outside forecast; quality unknown"],
+                          conditions, False, expires)
+    quality = 100*geometry*(1-clamp(cloud.value/100))
+    return Assessment(round(quality, 1), round(cloud.confidence*0.85, 3), components, reasons,
+                      conditions, usable, expires)
+
+
 PROFILES = {"planetary": Profile(planetary, ("cloud_total", "visibility", "humidity", "seeing_index", "wind_surface", "wind_250hpa")),
+            "meteors": Profile(meteors, ("cloud_total",)),
             "sunset": Profile(sunset, ("cloud_low", "cloud_mid", "cloud_high", "visibility", "humidity"))}
 
 

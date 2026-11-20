@@ -16,6 +16,9 @@ the previous camera implementation or these instructions as hardware acceptance.
 
 - Jupiter/Saturn/Mars observing windows, sunset opportunities and observer-local
   solar/lunar eclipses with horizon clipping and solar safety.
+- Optional [meteor showers](docs/meteors.md): 13 known annual showers, three local
+  peak nights, dark-sky/radiant geometry, moonlight and shared cloud forecasts.
+  Enable **Meteor showers (three peak nights)** in Settings and restart.
 - Optional [Jupiter phenomena](docs/jupiter.md): Galilean moon transits, shadow
   transits, observable eclipse/occultation transitions and simultaneous Great Red
   Spot opportunities. Shared cloud/seeing/elevation assessment stays separate

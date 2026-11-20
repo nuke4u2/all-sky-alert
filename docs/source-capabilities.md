@@ -1,5 +1,15 @@
 # Source capability matrix
 
+## Meteor shower module — 2026-11-19
+
+The optional [meteor shower detector](meteors.md) bundles nominal solar
+longitudes and peak radiants from the [IMO 2027 Calendar, Table 5](https://www.imo.net/files/meteor-shower/cal2027.pdf).
+Astronomy Engine calculates annual J2000-longitude crossings, local radiant
+altitude, darkness and Moon geometry offline. This is annual planning geometry,
+not live meteor detections, predicted outbursts or a local meteor-rate forecast.
+Cloud cover uses the existing shared Open-Meteo snapshot; no runtime catalog
+downloads, new credentials or additional dependencies are required.
+
 ## Jupiter module — 2026-10-28
 
 The optional [Jupiter detector](jupiter.md) uses the existing MIT-licensed

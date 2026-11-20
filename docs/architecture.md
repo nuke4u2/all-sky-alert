@@ -81,6 +81,13 @@ the first provider is point/grid based and does not claim horizon resolution.
 
 ## Event representation
 
+The optional `meteors` detector uses a bundled, attributed annual shower catalog
+and local ephemerides to emit one opportunity per shower/observing night across
+three peak nights. Its independent `meteors` profile consumes shared total cloud
+cover, radiant geometry and moonlight, without Canadian seeing acquisition.
+Unknown/stale clouds cannot qualify routine alerts. Catalog and night identity
+stay independent of weather. See [meteor methods and limits](meteors.md).
+
 The optional `jupiter` detector follows these same contracts: `jovian.py` supplies
 local light-time-corrected Galilean vectors and projected oblate-disk geometry;
 `jupiter.py` clips phenomena to local altitude/darkness and emits Candidates.
@@ -307,8 +314,9 @@ with wind scores or measured arcseconds. Automatic multi-model fusion is deferre
 Future review: occultations and conjunction transits need second/subsecond geometry
 and telescope footprints; Phase 3 provides nominal ISS disk contacts, but uncertainty
 footprints remain deferred. These consumers must not reuse the
-15-minute planetary sampling algorithm. Comets/showers need radiant/track geometry
-and Moon assessments. Aurora needs oval/line-of-sight geometry and sector clouds;
+15-minute planetary sampling algorithm. Comets need track geometry and Moon
+assessments; annual showers now have a bounded planning module. Aurora needs
+oval/line-of-sight geometry and sector clouds;
 launches/reentries require trajectories and external stable IDs; aircraft episodes
 already consume timestamped state vectors with persistent identity. Halos
 need optical cloud properties. All can use the envelope, optional geometry and
