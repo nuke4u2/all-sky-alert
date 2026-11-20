@@ -13,6 +13,12 @@
 <p class="time">{{ e.start|localtime }} → {{ e.end|localtime }}<br><span class="muted">Peak {{ e.peak|localtime }}</span></p>
 <div class="scores detail-scores"><div><span>Intrinsic interest</span><strong>{{ e.interest }}<small>/100</small></strong></div><div><span>Observing quality</span><strong>{{ a.quality if a.quality is not none else 'Unknown' }}{% if a.quality is not none %}<small>/100</small>{% endif %}</strong></div><div><span>Occurrence confidence</span><strong>{{ (e.occurrence_confidence * 100)|round|int }}<small>%</small></strong></div><div><span>Observing confidence</span><strong>{{ (a.confidence * 100)|round|int }}<small>%</small></strong></div></div>
 <h2>Why it’s interesting</h2><ul>{% for reason in e.reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
+{% if e.detector == 'lunar_occultations' %}
+<h2>Moon–planet occultation contacts</h2>
+<p>This opportunity concerns {{ e.metadata.transition|replace('_', ' ') }}{% if e.metadata.partial %} overlap{% endif %}. Its cloud, weather and seeing assessment applies to the visible contact window {{ e.metadata.visible_contact_start|contacttime }} → {{ e.metadata.visible_contact_end|contacttime }}. The observing window above includes preparation time.</p>
+<div class="table-wrap"><table><thead><tr><th>Nominal contact</th><th>Observer time</th><th>Planet elevation</th><th>Passes local viewing limits</th></tr></thead><tbody>{% for c in e.metadata.contacts %}<tr><td>{{ c.label }}</td><td>{{ c.time|contacttime }}</td><td>{{ c.altitude_deg }}°</td><td>{{ 'Yes' if c.observable else 'No' }}</td></tr>{% endfor %}</tbody></table></div>
+<p>{{ e.metadata.contact_definition }} Displayed seconds support planning and do not establish second-level prediction accuracy.</p>
+{% endif %}
 {% if e.detector == 'jupiter' %}
 <h2>Jupiter viewing opportunity</h2>
 <p>The viewing window above is restricted to your configured Jupiter elevation and darkness. Intrinsic interest describes the phenomena; observing quality separately weighs cloud cover, seeing, transparency and elevation.</p>

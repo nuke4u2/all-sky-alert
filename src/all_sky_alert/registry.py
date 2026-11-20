@@ -15,6 +15,7 @@ from .aircraft import AircraftDetector
 from .crystals import SkyCrystalDetector
 from .jupiter import JupiterDetector
 from .meteors import MeteorShowerDetector
+from .occultations import LunarOccultationDetector
 
 
 @dataclass(frozen=True)
@@ -35,6 +36,9 @@ class DetectorRegistration:
 
 
 DETECTORS = {
+    "lunar_occultations": DetectorRegistration(LunarOccultationDetector, LunarOccultationDetector.defaults,
+                                    LunarOccultationDetector.validate_settings, profiles=("planetary",),
+                                    ephemeris=False, label="Moon occulting planets", long_range_horizon="horizon_days"),
     "meteors": DetectorRegistration(MeteorShowerDetector, MeteorShowerDetector.defaults,
                                     MeteorShowerDetector.validate_settings, profiles=("meteors",),
                                     label="Meteor showers (three peak nights)"),

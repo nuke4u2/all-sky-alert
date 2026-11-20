@@ -10,6 +10,7 @@ to catch misspelled settings. Restart after edits. Tables isolate concerns:
 | detectors.planetary | enabled, geometry interval_seconds, bodies, minimum altitude, maximum Sun altitude, aperture_mm |
 | detectors.sunset | enabled, geometry interval_seconds |
 | detectors.meteors | enabled, interval_seconds, minimum_altitude_deg (radiant), maximum_sun_altitude_deg; [methods](meteors.md) |
+| detectors.lunar_occultations | enabled, interval_seconds, independent horizon_days, bodies, minimum_altitude_deg, maximum_sun_altitude_deg, minimum_solar_elongation_deg, preparation_minutes; [methods](lunar-occultations.md) |
 | detectors.eclipses | enabled, horizon_days, interval_seconds, solar/lunar/penumbral, minimum_altitude_deg |
 | detectors.aurora | enabled, interval_seconds, minimum_intensity, minimum_horizon_elevation_deg, maximum_sun_altitude_deg, emission height range |
 | providers.swpc | enabled, cache_seconds, stale_after_minutes, invalid_after_minutes |

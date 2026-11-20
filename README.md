@@ -19,6 +19,9 @@ the previous camera implementation or these instructions as hardware acceptance.
 - Optional [meteor showers](docs/meteors.md): 13 known annual showers, three local
   peak nights, dark-sky/radiant geometry, moonlight and shared cloud forecasts.
   Enable **Meteor showers (three peak nights)** in Settings and restart.
+- Optional [Moon–planet occultations](docs/lunar-occultations.md): observer-local
+  finite-disk disappearance/reappearance, high interest and shared cloud/weather/
+  seeing screening. Enable **Moon occulting planets** in Settings and restart.
 - Optional [Jupiter phenomena](docs/jupiter.md): Galilean moon transits, shadow
   transits, observable eclipse/occultation transitions and simultaneous Great Red
   Spot opportunities. Shared cloud/seeing/elevation assessment stays separate
@@ -200,8 +203,8 @@ The existing Gmail OAuth adapter now supports three independent family selection
 - Daily: **07:00 in the observer timezone**, summarizing remaining eligible windows
   overlapping that local calendar day, including cross-midnight events.
 - Weekly: **Sunday 18:00**, interest at least **70**, starts strictly beyond seven
-  calendar days through 90 days. Currently only eclipses declare a meaningful
-  long-range horizon; the existing 730-day eclipse calculation supplies these rows.
+  calendar days through 90 days. Eclipses (730 days) and optional Moon–planet
+  occultations (90 days) declare independent long-range geometry horizons.
   Weather, aircraft, aurora and orbital-element forecasts are not extended.
 
 These schedules and thresholds are configurable in Settings and TOML. Saves require

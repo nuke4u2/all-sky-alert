@@ -1,5 +1,19 @@
 # Source capability matrix
 
+## Moon–planet occultation module — 2026-11-20
+
+The optional [lunar occultation detector](lunar-occultations.md) uses the existing
+packaged DE421, Skyfield and WGS84 observer geometry offline. It validates the
+kernel's conservative 1900–2053 coverage; built-in timescale tables avoid live
+Earth-orientation downloads. Planetary mean radii come from
+[NASA/JPL](https://ssd.jpl.nasa.gov/planets/phys_par.html) and the Moon radius from
+[JPL satellite parameters](https://ssd.jpl.nasa.gov/sats/phys_par/).
+Independent [IOTA/RASC 2026 station timings](https://occultations.org/publications/rasc/2026/MasWasChi.txt)
+validate the October Jupiter event. Contact times assume circular disks, with
+outer-planet barycenters approximating centers; no rings, oblateness, lunar
+topography or subsecond physical timing claim. Cloud/weather and optional ECCC
+seeing are shared per contact; the detector has no feed or credentials.
+
 ## Meteor shower module — 2026-11-19
 
 The optional [meteor shower detector](meteors.md) bundles nominal solar

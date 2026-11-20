@@ -5,11 +5,12 @@ from zoneinfo import ZoneInfo
 from .domain import parse
 
 
-def local_time(value, timezone, *, precise=False):
+def local_time(value, timezone, *, precise=False, seconds=False):
     if not value:
         return "Unknown"
     stamp = parse(value).astimezone(ZoneInfo(timezone))
-    pattern = "%Y-%m-%d %H:%M:%S.%f %Z" if precise else "%a %b %d %Y, %I:%M %p %Z"
+    pattern = ("%Y-%m-%d %H:%M:%S.%f %Z" if precise else
+               "%a %b %d %Y, %I:%M:%S %p %Z" if seconds else "%a %b %d %Y, %I:%M %p %Z")
     return stamp.strftime(pattern)
 
 

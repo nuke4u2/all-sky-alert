@@ -32,6 +32,8 @@ def field_definitions():
             ("notifications.exceptional_interest","Exceptional interest for weather bypass"),
             ("detectors.planetary.minimum_altitude_deg","Planet minimum elevation (°)"),
             ("detectors.jupiter.minimum_altitude_deg","Jupiter phenomena minimum elevation (°)"),
+            ("detectors.lunar_occultations.minimum_altitude_deg","Moon–planet occultation minimum elevation (°)"),
+            ("detectors.lunar_occultations.maximum_sun_altitude_deg","Moon–planet occultation Sun elevation ceiling (°)"),
             ("detectors.adsb.minimum_altitude_deg","Aircraft entry elevation (°)"),("detectors.adsb.exit_altitude_deg","Aircraft exit elevation (°)"),
             ("detectors.adsb.low_altitude_m","Interesting low aircraft height (m)"),("providers.adsb.radius_nm","Acquisition radius (nautical miles)"),
             ("map.radius_km","Map interest radius (km)"),("map.track_minutes","Observed trail retention (minutes)"),

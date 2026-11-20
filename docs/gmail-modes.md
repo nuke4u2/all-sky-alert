@@ -26,8 +26,9 @@ bypass and are explained separately. Weekly selects starts strictly beyond the
 configured seven-calendar-day offset through 90 days by default, at interest >=70.
 It requires occurrence confidence/scientific validity, not weather availability.
 Only detector registrations declaring a meaningful long-range geometry horizon
-participate. Currently eclipses already calculate 730 days independently of the
-seven-day general horizon. No ADS-B/aurora/weather/GP horizon is expanded; missing
+participate. Eclipses calculate 730 days and optional Moon–planet occultations
+calculate 90 days independently of the seven-day general horizon. No
+ADS-B/aurora/weather/GP horizon is expanded; missing
 future predictions are explained, never invented. More long-range families can
 declare their own horizon setting when actually implemented.
 
@@ -283,7 +284,7 @@ Both paths have offline regression tests with fake Gmail adapters.
 - Pi hardware/native scheduling were not exercised. This phase used Windows
   offline integration/browser checks; it did not revive deprecated containers.
 
-Remaining limits: only eclipses currently declare useful long-range geometry;
+Remaining limits: only eclipses and optional Moon–planet occultations declare useful long-range geometry;
 other meaningful astronomy needs actual detectors, not mail-only placeholders.
 No live test email, hardware deployment or delivery acceptance is claimed. Preview
 content can change as predictions update; new sends/retries reselect current

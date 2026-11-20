@@ -61,7 +61,7 @@ configured catalog-object sunlit geometry (brightness unknown), and ADS-B live
 episodes. Shared GP/SGP4/DE421 supports both orbital detectors; aircraft uses its
 own timestamped state source and optional non-gating metadata. Aurora is
 an explicitly heuristic horizon opportunity, with source-age gates and no Kp-only
-mapping. The [source matrix](source-capabilities.md) records nine families' feasibility.
+mapping. The [source matrix](source-capabilities.md) records family feasibility and implemented extensions.
 
 Cloud fractions, humidity, visibility and winds are raw metrics. Derived
 transparency is a visibility/humidity proxy, not astronomical extinction.
@@ -80,6 +80,17 @@ without altering detectors. The snapshot request carries event time and directio
 the first provider is point/grid based and does not claim horizon resolution.
 
 ## Event representation
+
+The optional `lunar_occultations` detector searches apparent topocentric Moon/
+planet disk minima with the existing packaged DE421 and built-in timescale.
+It emits separate visible contact opportunities for disappearance and
+reappearance, or one nominal partial-overlap opportunity. Independent long-range
+geometry is persisted; the existing `planetary` profile requests shared weather
+and optional ECCC seeing at each contact's own time. Interest 89 is high enough
+for default immediate routing and below the default exceptional weather bypass.
+This backend validates its own kernel coverage and provenance instead of
+declaring an Astronomy Engine source-health dependency. See
+[occultation methods and limits](lunar-occultations.md).
 
 The optional `meteors` detector uses a bundled, attributed annual shower catalog
 and local ephemerides to emit one opportunity per shower/observing night across
@@ -311,9 +322,11 @@ overlap. Current sources have complementary roles: Open-Meteo weather and ECCC
 seeing categories. Explicit planetary precedence avoids blending ordinal indices
 with wind scores or measured arcseconds. Automatic multi-model fusion is deferred.
 
-Future review: occultations and conjunction transits need second/subsecond geometry
-and telescope footprints; Phase 3 provides nominal ISS disk contacts, but uncertainty
-footprints remain deferred. These consumers must not reuse the
+Future review: precision occultation timing, lunar limb profiles and conjunction
+transits need dedicated second/subsecond geometry and telescope footprints;
+Moon–planet occultations now have approximate finite circular-disk contacts.
+Phase 3 provides nominal ISS disk contacts, but uncertainty footprints remain
+deferred. These consumers must not reuse the
 15-minute planetary sampling algorithm. Comets need track geometry and Moon
 assessments; annual showers now have a bounded planning module. Aurora needs
 oval/line-of-sight geometry and sector clouds;

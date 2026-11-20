@@ -75,6 +75,18 @@ interval_seconds = 21600
 minimum_altitude_deg = 15 # Radiant elevation; no local terrain mask.
 maximum_sun_altitude_deg = -12
 
+# Observer-local lunar occultations; each visible disappearance/reappearance
+# receives its own shared cloud/weather/seeing assessment. Existing configs off.
+[detectors.lunar_occultations]
+enabled = true
+interval_seconds = 21600
+horizon_days = 90 # Independent geometry horizon, maximum 366; no weather extension.
+bodies = ["Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"]
+minimum_altitude_deg = 10
+maximum_sun_altitude_deg = -6 # Night/twilight by default; >0 permits daytime with solar safety guidance.
+minimum_solar_elongation_deg = 20
+preparation_minutes = 10
+
 [detectors.eclipses]
 enabled = true
 horizon_days = 730 # Independent of the short planetary horizon.

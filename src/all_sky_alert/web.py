@@ -165,6 +165,7 @@ def create_app(service: Service, *, background: bool = True) -> FastAPI:
     app.mount("/static", StaticFiles(directory=directory / "static"), name="static")
     templates = Jinja2Templates(directory=directory / "templates")
     templates.env.filters["localtime"] = lambda value: local_time(value, config.observer.timezone)
+    templates.env.filters["contacttime"] = lambda value: local_time(value, config.observer.timezone, seconds=True)
     templates.env.filters["localtext"] = lambda value: local_text(value, config.observer.timezone)
     templates.env.filters["safe_url"] = safe_url
     templates.env.filters["aircraft_summary"] = aircraft_summary

@@ -61,6 +61,15 @@ def render_message(alert: dict, recipient: str, timezone: str = "UTC") -> EmailM
             f"Start: {local_time(event['start'], timezone)}", f"Peak: {local_time(event['peak'], timezone)}"]
     if event.get("end"):
         text.append(f"End: {local_time(event['end'], timezone)}")
+    if event.get("detector") == "lunar_occultations":
+        metadata = event["metadata"]
+        text += ["", "Nominal Moon–planet occultation contacts:"]
+        for contact in metadata["contacts"]:
+            text.append(f"{contact['label']}: {local_time(contact['time'], timezone, seconds=True)}; "
+                        f"planet elevation {contact['altitude_deg']}°; "
+                        f"local viewing limits {'pass' if contact['observable'] else 'fail'}")
+        text += [metadata["contact_definition"],
+                 "Displayed seconds support planning; they are not actual prediction accuracy.", ""]
     text += [f"Intrinsic interest: {event['interest']}/100; observing quality: {quality}",
             f"Occurrence confidence: {event['occurrence_confidence']}; assessment confidence: {assessment['confidence']}",
             f"Atmosphere: {assessment['conditions']['status']}", "", *event["reasons"], *assessment["reasons"], "", "Sources:"]
