@@ -126,3 +126,49 @@ Tests block live network and use private scratch databases. Raspberry Pi runtime
 performance acceptance remains pending; use the documented updater before enabling
 the public cache. Pre-existing Jupiter/dashboard edits in the working tree were
 preserved and are outside this aircraft task.
+
+
+## Aircraft map tooltip sizing
+
+Aircraft hover labels now use a dedicated `aircraft-map-tooltip` Leaflet class
+with explicit 240px width, a smaller viewport-relative maximum on phones, 14px
+text and normal word wrapping. This prevents the absolute tooltip box from
+shrinking to a character column under the page-wide `overflow-wrap:anywhere`.
+The vendor stylesheet stays unchanged; the scoped rule has enough specificity
+when Leaflet CSS loads after the main stylesheet.
+
+`scripts/aircraft_ui_browser_smoke.py` now checks actual hover label dimensions,
+text size and overflow for both synthetic aircraft at 360/390/768/1280px widths,
+and supports `--output` to keep screenshots/reports in the shared test workspace.
+Verification: 55 targeted aircraft/map/enrichment tests passed; JavaScript syntax,
+Python script compilation and `git diff --check` passed. Browser layout execution
+remains unverified: sandbox Edge launch failed with access errors, and the approved
+escalated attempt failed to create the process security environment. No browser
+or dependency installation was attempted. Next verification: run the fixture-only
+browser smoke script with an available browser and inspect `tooltip-390.png` and
+`tooltip-1280.png`. No production config or service was changed.
+
+## Enrichment command-line loading
+
+`enrichment-update [--force]` now loads or validates the public catalog in the
+configured service data directory. README and aircraft-enrichment.md document
+the stop/update/start sequence, source-setting prerequisite and JSON output.
+The command acquires ServiceLock before creating the Store or HTTP client and
+does not construct Service, run detectors, acquire positions/weather, read OAuth
+files, send mail, open a camera or edit configuration. It can prefill the cache
+with the ADS-B detector disabled, but enrichment must explicitly be enabled in
+public mode. No new configuration fields or dependencies were needed.
+
+StandingDataEnrichment.maintain returns an outcome for operator reporting;
+normal slow-lane callers continue to ignore its return value. `force=True`
+bypasses only the weekly age check. ETag/304 validation and persisted error/
+Retry-After backoff remain in effect. CLI failures/backoff exit 1 even if an old
+cache exists; a valid retained cache is never presented as a successful failed
+update. Output includes cache path/size, validation/download times and row counts
+on success, or error/next_attempt on failure.
+
+Verification: 94 offline tests passed across command loading/force/304/failure/
+backoff/lock/settings cases, catalog, aircraft/map, service/storage, Gmail config
+and Phase 3 integration. CLI help, Python compilation and diff checks passed.
+No live catalog download, production config access or Pi service change was
+performed for this command-line addition.

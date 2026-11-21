@@ -39,8 +39,9 @@ def main():
     parser=ArgumentParser()
     parser.add_argument('--channel',default='msedge' if os.name=='nt' else None)
     parser.add_argument('--port',type=int,default=8023)
+    parser.add_argument('--output',type=Path,default=Path('test-artifacts/aircraft-ui-browser'))
     args=parser.parse_args()
-    output=Path('test-artifacts/aircraft-ui-browser')
+    output=args.output
     output.mkdir(parents=True,exist_ok=True)
     payload=json.loads(Path('tests/fixtures/adsb-radius.json').read_text())
     payload['ac']=payload['ac'][:2]
@@ -106,6 +107,7 @@ def main():
                 errors=[]
                 page.on('pageerror',lambda error:errors.append(str(error)))
                 checks=[]
+                tooltip_checks=[]
                 for width in (360,390,768,1280):
                     page.set_viewport_size({'width':width,'height':900})
                     for path in ('/','/aircraft','/events/'+event_id):
@@ -116,6 +118,29 @@ def main():
                             expect(page.locator('#live-aircraft .aircraft-route').first).to_contain_text('JFK')
                         elif path=='/aircraft':
                             expect(page.locator('#aircraft-list button')).to_have_count(2)
+                            # Hover labels must keep a readable width even when
+                            # the page permits arbitrary long words to wrap.
+                            page.locator('#aircraft-map').scroll_into_view_if_needed()
+                            for marker in page.locator('#aircraft-map path.leaflet-interactive').all():
+                                box=marker.bounding_box()
+                                if not box:
+                                    continue
+                                marker.dispatch_event('mouseover',{'clientX':box['x']+box['width']/2,
+                                    'clientY':box['y']+box['height']/2})
+                                tooltip=page.locator('.leaflet-tooltip:has(.aircraft-tooltip)')
+                                if tooltip.count():
+                                    expect(tooltip).to_be_visible()
+                                    size=tooltip.evaluate("""node => ({width:node.getBoundingClientRect().width,
+                                        height:node.getBoundingClientRect().height,
+                                        scroll:node.scrollWidth,client:node.clientWidth,
+                                        font:parseFloat(getComputedStyle(node).fontSize)})""")
+                                    assert 120<=size['width']<=240 and size['height']<200,(width,size)
+                                    assert size['scroll']<=size['client']+1 and size['font']>=14,(width,size)
+                                    tooltip_checks.append({'viewport':width,**size})
+                                    if width in (390,1280):
+                                        page.screenshot(path=str(output/f'tooltip-{width}.png'),full_page=True)
+                                marker.dispatch_event('mouseout')
+                            assert len([check for check in tooltip_checks if check['viewport']==width])==2,tooltip_checks
                             chosen=page.locator('#aircraft-list button[data-icao24="abc123"]')
                             expect(chosen).to_contain_text('Example Air')
                             chosen.click()
@@ -160,7 +185,7 @@ def main():
                     expect(page.locator(selector)).to_have_count(0)
                 assert calls==['api.adsb.lol'],calls
                 assert not errors and not external,(errors,external)
-                report={'fixture_only':True,'checks':checks,'browser':browser.version,
+                report={'fixture_only':True,'checks':checks,'tooltip_checks':tooltip_checks,'browser':browser.version,
                     'xss_safe':True,'position_expiry':True,'upstream_calls':len(calls),
                     'external_browser_requests':external,'browser_errors':errors}
                 (output/'report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')

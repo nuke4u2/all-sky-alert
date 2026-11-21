@@ -33,6 +33,25 @@ beside the application database in the configured data directory. One cache serv
 all tracked aircraft and survives restarts. There are no API keys, new Python
 dependencies, scheduled tasks or per-aircraft HTTP requests.
 
+To load the cache before the next worker cycle or check upstream immediately,
+stop the service and run the following from the installed project directory,
+then restart the service:
+
+```bash
+.venv/bin/python -m all_sky_alert --config config.toml enrichment-update --force
+```
+
+This uses the same configured data directory and requires public mode enabled,
+but can prefill the cache even while the ADS-B detector is disabled. The command
+prints JSON with status (`updated`, `not_modified` or `cached`), cache path/size,
+row counts and catalog validation timestamps. It never initializes the service,
+acquires live positions/weather, opens a camera or sends mail. The service lock
+prevents simultaneous maintenance. `--force` bypasses the weekly age check,
+retaining conditional requests and persisted server/error backoff. Omit it to
+reuse a fresh cache. Failure or backoff returns exit status 1 with an error and
+`next_attempt`; having an older retained cache does not turn failure into success.
+The command does not edit configuration or enable the feature automatically.
+
 After seven days the slow worker makes a conditional request using the stored
 ETag. HTTP 304 advances the catalog validation time without rebuilding the DB;
 HTTP 200 builds a new DB and atomically replaces the old one after validation.

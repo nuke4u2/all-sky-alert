@@ -67,7 +67,7 @@
         const summary=row.aircraft_summary;
         const label=document.createElement('span');label.className='aircraft-tooltip';
         add(label,'strong',summary.airline);add(label,'strong',summary.type_name);add(label,'span',(summary.route_note?'Catalog (unconfirmed): ':'')+summary.origin+' → '+summary.destination);add(label,'small',summary.identity);
-        const marker=L.circleMarker([row.latitude,row.longitude],{radius:9,color:'#4bcaff',fillOpacity:0.8,weight:2}).addTo(layer).bindTooltip(label);
+        const marker=L.circleMarker([row.latitude,row.longitude],{radius:9,color:'#4bcaff',fillOpacity:0.8,weight:2}).addTo(layer).bindTooltip(label,{className:'aircraft-map-tooltip'});
         marker.on('click',()=>show(row));items.push(marker);
         const solid=L.polyline(row.history.map(p=>[p.latitude,p.longitude]),{color:'#4bcaff',weight:3}).addTo(layer);items.push(solid);
         // Heading tick uses only numeric geometry, never provider HTML.

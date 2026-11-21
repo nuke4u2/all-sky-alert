@@ -200,6 +200,30 @@ Initialization is not proof of upstream connectivity/freshness. Keep one process
 and one worker; do not use `--reload`. Ctrl+C stops the foreground service.
 `evaluate` honors configured notification methods; it can send mail if enabled.
 
+### Load or refresh the aircraft enrichment database now
+
+Install the latest application with the [Pi updater](#development-and-updates)
+before using a newly added command.
+In Settings, enable **Aircraft labels / route enrichment**, select **Public catalog
+(weekly cache)** and save. To populate the first cache or check for updates now:
+
+```bash
+cd ~/projects/all-sky-alert
+sudo systemctl stop all-sky-alert
+.venv/bin/python -m all_sky_alert --config config.toml enrichment-update --force
+sudo systemctl start all-sky-alert
+```
+
+The command uses the service's configured data directory and prints the cache
+path, size, row counts and validation time. It requires internet access and no
+extra dependencies. It performs no aircraft detection, weather acquisition, mail
+or camera operation. An active service lock makes it exit before updating.
+`--force` bypasses the weekly age check; the server may confirm an unchanged
+catalog with HTTP 304. Persisted backoff still applies. Without `--force`, a fresh
+cache is reused. A failed update/backoff exits nonzero, reports `next_attempt` and
+keeps the previous cache if present. See [cache details](docs/aircraft-enrichment.md)
+for disk limits, freshness and unconfirmed route interpretation.
+
 ## Gmail notification modes
 
 The existing Gmail OAuth adapter now supports three independent family selections:

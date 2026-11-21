@@ -155,10 +155,10 @@ class StandingDataEnrichment:
             meta = {**meta, **checked}
         return meta
 
-    def maintain(self, now):
-        """Called only by the serial slow lane. No live feed queries here."""
+    def maintain(self, now, *, force=False):
+        """Slow lane or locked CLI update; force bypasses age, never backoff."""
         if not self.settings["enabled"]:
-            return
+            return {"status": "disabled"}
         try:
             meta = None
             try:
@@ -171,10 +171,10 @@ class StandingDataEnrichment:
             except (sqlite3.Error, ValueError, KeyError, TypeError):
                 pass
             cache = self.store.cache(self.key)
-            if meta and 0 <= (now-parse(meta["verified_at"])).total_seconds() < self.settings["refresh_days"]*86400:
-                return
+            if not force and meta and 0 <= (now-parse(meta["verified_at"])).total_seconds() < self.settings["refresh_days"]*86400:
+                return {"status": "cached", **meta}
             if cache and cache["next_attempt"] and now < parse(cache["next_attempt"]):
-                return
+                return {"status": "backoff", "next_attempt": cache["next_attempt"], "error": cache["error"]}
             headers = {"Accept-Encoding": "identity"}
             if meta and meta.get("etag"):
                 headers["If-None-Match"] = meta["etag"]
@@ -183,8 +183,9 @@ class StandingDataEnrichment:
                 if response.status_code == 304:
                     if not meta:
                         raise ValueError("VRS 304 without a valid cache")
-                    self.store.cache_success(self.key, {**meta, "verified_at": iso(now)}, now)
-                    return
+                    metadata = {**meta, "verified_at": iso(now)}
+                    self.store.cache_success(self.key, metadata, now)
+                    return {"status": "not_modified", **metadata}
                 response.raise_for_status()
                 if response.status_code != 200:
                     raise ValueError("Unexpected VRS status")
@@ -209,6 +210,7 @@ class StandingDataEnrichment:
                     with self._lock:
                         os.replace(database, self.path)
                         self.store.cache_success(self.key, metadata, now)
+                    return {"status": "updated", **metadata}
         except Exception as exc:
             cache = self.store.cache(self.key)
             failures = (cache["failures"] if cache else 0)+1
@@ -224,7 +226,9 @@ class StandingDataEnrichment:
                         wait = max(wait, min(86400, (parsedate_to_datetime(header)-now).total_seconds()))
                     except (ValueError, TypeError):
                         pass
-            self.store.cache_failure(self.key, failures, now+timedelta(seconds=wait), error)
+            retry_at = now+timedelta(seconds=wait)
+            self.store.cache_failure(self.key, failures, retry_at, error)
+            return {"status": "error", "error": error, "next_attempt": iso(retry_at)}
 
     def _lookup(self, db, state, meta, now):
         checked = parse(meta["verified_at"])

@@ -51,6 +51,8 @@ def main():
     commands.add_parser("runtime-info", help="Show interpreter, imported package/schema paths and registered detectors; no config, database, feeds or credentials read")
     commands.add_parser('config-sync',help='Validate and add missing defaults, preserving all supplied values; restart required')
     commands.add_parser("reset-orbit-source", help="Explicitly clear CelesTrak HTTP stop after investigating the error; no fetch/email")
+    enrichment = commands.add_parser("enrichment-update", help="Load/update the public aircraft catalog in configured storage; stop service first; no detection/mail/camera")
+    enrichment.add_argument("--force", action="store_true", help="Check upstream now, ignoring weekly cache age; conditional requests and persisted backoff still apply")
     smoke = commands.add_parser("source-smoke", help="Explicit public-source connectivity check; separate storage, no mail/credentials")
     smoke.add_argument("--source",choices=("orbits","adsb","both"),default="both")
     commands.add_parser("gmail-authorize", help="Interactive Gmail OAuth setup; sends no mail")
@@ -100,6 +102,25 @@ def main():
             from .config_edit import ConfigEditor
             ConfigEditor(config.file_path).sync()
             print('Configuration synchronized; existing values preserved. Restart required. Omitted detectors retain safe disabled defaults.')
+            return
+        if args.command == "enrichment-update":
+            import httpx
+            from .standing_data import StandingDataEnrichment
+            from .storage import Store
+            settings = config.values["providers"]["enrichment"]
+            if not settings["enabled"] or settings["mode"] != "vrs":
+                raise ValueError("Enable Aircraft labels / route enrichment and select Public catalog (weekly cache) in Settings before enrichment-update")
+            with ServiceLock(config.data_dir), httpx.Client(timeout=20, follow_redirects=False,
+                    headers={"User-Agent": "AllSkyAlert/0.1"}) as client:
+                store = Store(config.data_dir/"all-sky-alert.sqlite3")
+                source = StandingDataEnrichment(client, store, config.observer, settings, ["adsb"])
+                now = utcnow()
+                result = source.maintain(now, force=args.force)
+                source.refresh(now)  # Record catalog health; no position source or feed acquisition.
+                print(json.dumps({"cache": str(source.path), **result,
+                    "database_bytes": source.path.stat().st_size if source.path.exists() else 0}, indent=2))
+                if result["status"] in ("error", "backoff"):
+                    raise RuntimeError("Enrichment update did not complete; see error/next_attempt above. Previous cache retained if present.")
             return
         if args.command == "source-smoke":
             import httpx
