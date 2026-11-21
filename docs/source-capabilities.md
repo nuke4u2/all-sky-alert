@@ -1,5 +1,15 @@
 # Source capability matrix
 
+## Public aircraft enrichment cache
+
+| Source | Data and rights | Acquisition / freshness | Limits and interpretation |
+|---|---|---|---|
+| [VRS standing-data](https://github.com/vradarserver/standing-data), [CC0 license](https://github.com/vradarserver/standing-data/blob/main/LICENSE) | Schema-01 aircraft/model, airline, airport and callsign-route catalogs; partial airframe coverage, no live flight plan | Optional weekly conditional bulk archive; atomic local SQLite; validation age distinct from ADS-B position age and unknown individual row-update time | 16 MiB download / 64 MiB DB / 750k CSV rows; routes expire after 14 days without validation, names after 30. Single-leg matches only, current endpoints unconfirmed; no per-aircraft requests or privacy reconstruction |
+
+See [aircraft cache operation](aircraft-enrichment.md). Existing licensed local
+files remain supported. Historical ADSBDB restrictions below concern a different
+source and still apply; no ADSBDB data is incorporated.
+
 ## Moon–planet occultation module — 2026-11-20
 
 The optional [lunar occultation detector](lunar-occultations.md) uses the existing

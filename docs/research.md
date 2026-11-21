@@ -136,6 +136,22 @@ first GP/DECAYING and TIP do not establish local plume/reentry visibility. The
 matrix preserves the blockers and future trajectory/geographic evidence required.
 No general venting/fuel-dump source was established.
 
+## Public aircraft enrichment cache
+
+The earlier ADSBDB restriction remains unchanged. A separate evaluated source,
+[Virtual Radar Server standing-data](https://github.com/vradarserver/standing-data),
+explicitly publishes its catalog under [CC0](https://github.com/vradarserver/standing-data/blob/main/LICENSE).
+Its schema-01 CSVs provide aircraft/model, airline, airport and callsign-route
+tables. The public aircraft table excludes the separate PlaneBase dataset;
+coverage is partial. Callsign routes are catalog entries, not confirmed current
+flight plans, and multi-stop routes cannot identify a current leg.
+
+A credential-free archive/import check measured 6.8 MiB compressed and 31.6 MiB
+for our reduced SQLite cache. A weekly conditional bulk refresh, bounded build
+and independent route/name expiry therefore fit the Pi better than per-aircraft
+HTTP lookups. No upstream source code or ADSBDB route data is copied. See
+[cache operation and limits](aircraft-enrichment.md) for the implemented policy.
+
 ## Phase 4 implementation research — 2026-10-10
 
 The existing small server-rendered stack justified Leaflet rather than a GPU/WebGL

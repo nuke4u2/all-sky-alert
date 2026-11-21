@@ -1,3 +1,4 @@
 {% macro route(s) -%}
 <div class="aircraft-route"><div><small>Origin</small><strong>{{ s.origin }}</strong></div><div><small>Destination</small><strong>{{ s.destination }}</strong></div></div>
+{% if s.route_note %}<p class="muted">{{ s.route_note }}</p>{% endif %}
 {%- endmacro %}

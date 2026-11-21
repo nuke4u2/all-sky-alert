@@ -313,6 +313,13 @@ is the concrete consumer). Service
 constructs one instance of each needed source and injects it into the detector
 factory. Tests can inject detector/source lists. Constructors receive prepared
 providers, not delivery adapters.
+The optional public aircraft catalog uses a provider `maintain(now)` hook only
+on the serial slow lane for bounded bulk updates. Its live `refresh(now)` makes
+bounded indexed local lookups against the already published ADS-B snapshot;
+`at()` and web reads use a prepared in-memory frame without I/O. `sources.py`
+injects the shared ADS-B provider into this enrichment provider explicitly.
+Catalog replacement is atomic and does not alter detector input validity or
+alert eligibility. See [aircraft enrichment](aircraft-enrichment.md).
 New provider: implement the conditions source contract or a typed domain-data
 provider injected into a detector's constructor. Register domain-data defaults,
 validation and factory in sources.py. Put I/O/validation/cache/freshness in

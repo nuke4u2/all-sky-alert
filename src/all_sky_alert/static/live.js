@@ -39,6 +39,7 @@ async function refreshAircraft() {
       add(card, "p", summary.identity + (summary.type_code ? " · ICAO type " + summary.type_code : "")).className = "muted";
       // Prose is an evaluation snapshot; it may contain independently expired route metadata.
       if (summary.route_source_name) add(card, "p", "Route source: " + summary.route_source_name).className = "muted";
+      if (summary.route_note) add(card, "p", summary.route_note).className = "muted";
       const g = aircraft.geometry;
       add(card, "p", (g.altitude_m / .3048).toLocaleString(undefined, {maximumFractionDigits: 0}) + " ft · " + g.from_direction + (g.toward_direction ? " → " + g.toward_direction : ""));
       add(card, "p", g.altitude_deg.toFixed(1) + "° elevation · " + g.range_km.toFixed(1) + " km range · interest " + aircraft.interest + "/100");

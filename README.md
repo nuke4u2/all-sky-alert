@@ -32,6 +32,10 @@ the previous camera implementation or these instructions as hardware acceptance.
 - Aircraft cards, map labels and notifications lead with airline, manufacturer/base
   model and origin/destination. Airline/routes use optional sourced metadata;
   missing details stay unknown. Common type codes have an offline model lookup.
+- Optional [public aircraft enrichment cache](docs/aircraft-enrichment.md): CC0
+  airline/model/airport/callsign catalogs, one weekly bulk refresh and no requests
+  per aircraft. Catalog endpoints are labelled unconfirmed; existing licensed
+  local-file enrichment remains supported.
 - Shared weather, optional native Canadian seeing categories and optional sparse
   HRRR ice-crystal optics opportunities. Scores are uncalibrated opportunities;
   unknown inputs never mean clear skies, and stale scientific inputs cannot alert.

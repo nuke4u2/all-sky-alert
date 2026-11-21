@@ -38,6 +38,10 @@ def aircraft_summary(metadata, now=None):
     deadline = enriched.get("usable_until") or enriched.get("valid_until")
     if now is not None and deadline and now > parse(deadline):
         enriched = {}
+    route_deadline = enriched.get("component_deadlines", {}).get("route")
+    if now is not None and route_deadline and now > parse(route_deadline):
+        for key in ("origin", "destination", "route_note"):
+            enriched.pop(key, None)
     code = metadata.get("type_code")
     maker, model = enriched.get("manufacturer"), enriched.get("base_model")
     name = enriched.get("type_name")
@@ -61,4 +65,5 @@ def aircraft_summary(metadata, now=None):
         "origin": enriched.get("origin") or "Unknown origin",
         "destination": enriched.get("destination") or "Unknown destination",
         "route_source_name": enriched.get("source_name") if enriched.get("origin") and enriched.get("destination") else None,
+        "route_note": enriched.get("route_note") if enriched.get("origin") and enriched.get("destination") else None,
     }

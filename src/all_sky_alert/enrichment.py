@@ -1,4 +1,4 @@
-"""Non-gating, user-licensed aircraft metadata. No route guessing or remote DB copy."""
+"""Optional aircraft metadata: legacy licensed files or the public CC0 catalog."""
 from datetime import timedelta
 from pathlib import Path
 import json
@@ -101,3 +101,23 @@ class LocalEnrichment:
                 return {**row,"age_seconds":round(age,1),"retrieved_at":self.health.retrieved_at,"status":"fresh",
                         "usable_until":iso(min(parse(row["valid_until"]),parse(row["updated_at"])+timedelta(hours=self.settings["max_age_hours"])))}
         return None
+
+
+DEFAULTS = {**LocalEnrichment.defaults, "mode": "local", "refresh_days": 7,
+            "metadata_max_age_days": 30, "routes_max_age_days": 14}
+
+
+def validate_settings(settings):
+    LocalEnrichment.validate_settings(settings)
+    if settings["mode"] not in ("local", "vrs"):
+        raise ValueError("Enrichment mode must be local or vrs")
+    bounded(settings["refresh_days"], 1, 30, "enrichment.refresh_days")
+    bounded(settings["routes_max_age_days"], settings["refresh_days"], 30, "enrichment.routes_max_age_days")
+    bounded(settings["metadata_max_age_days"], settings["routes_max_age_days"], 90, "enrichment.metadata_max_age_days")
+
+
+def build_enrichment(client, store, observer, settings, consumers, positions=None):
+    if settings["mode"] == "vrs":
+        from .standing_data import StandingDataEnrichment
+        return StandingDataEnrichment(client, store, observer, settings, consumers, positions)
+    return LocalEnrichment(client, store, observer, settings, consumers)

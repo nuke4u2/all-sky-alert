@@ -51,7 +51,8 @@ def render_message(alert: dict, recipient: str, timezone: str = "UTC") -> EmailM
     message["To"] = recipient
     # Gmail supplies the authenticated sender; no Gmail read/profile scope is needed.
     plane = aircraft_summary(event.get("metadata", {})) if event.get("detector") == "adsb" else None
-    title = f"{plane['airline']} · {plane['type_name']} · {plane['origin']} → {plane['destination']} · {plane['identity']}" if plane else event["title"]
+    route_label = "Catalog route (unconfirmed): " if plane and plane.get('route_note') else ""
+    title = f"{plane['airline']} · {plane['type_name']} · {route_label}{plane['origin']} → {plane['destination']} · {plane['identity']}" if plane else event["title"]
     message["Subject"] = f"All Sky Alert · {alert['stage']} · {title}"
     message["Message-ID"] = f"<{alert['id'].replace(':', '.')}@all-sky-alert.local>"
     quality = "unknown" if assessment["quality"] is None else f"{assessment['quality']}/100"
@@ -80,6 +81,8 @@ def render_message(alert: dict, recipient: str, timezone: str = "UTC") -> EmailM
             text += [f"{plane['type_source_name']}: {plane['type_source_url']}"]
         if plane['route_source_name']:
             text += [f"Origin/destination source: {plane['route_source_name']}"]
+        if plane.get('route_note'):
+            text += [plane['route_note']]
         if plane['airline_source_name']:
             text += [f"Airline source: {plane['airline_source_name']}"]
     safety = event.get("metadata", {}).get("safety")

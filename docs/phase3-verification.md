@@ -2,6 +2,8 @@
 
 Historical Windows/container evidence; these commands are not the current Pi
 installation path. See [README](../README.md) and [re-audit](pi-reaudit.md).
+The enrichment claims below describe that historical phase; the later optional
+[CC0 public catalog cache](aircraft-enrichment.md) now supplements local files.
 
 Completed against the Phase 2 workspace on 2026-10-09. Read the
 [design recorded before implementation](phase3-architecture.md),

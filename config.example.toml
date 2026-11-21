@@ -176,10 +176,14 @@ stale_seconds = 30 # Actual seen_pos age, not HTTP age.
 invalid_seconds = 90
 
 [providers.enrichment]
-enabled = false # Optional user-licensed records, never copied ADSBDB routes.
-path = "enrichment.json" # Relative to this configuration; see README schema.
-cache_seconds = 3600
-max_age_hours = 24
+enabled = false # Optional local file or CC0 VRS standing-data cache.
+mode = "vrs" # Existing configs default to local; choose vrs in Settings and restart.
+path = "enrichment.json" # Local mode only; see docs/prediction-guide.md for schema.
+cache_seconds = 3600 # Local file mode only.
+max_age_hours = 24 # Local file mode only.
+refresh_days = 7 # One conditional bulk update per week, never per aircraft.
+routes_max_age_days = 14 # Catalog match, not confirmed current flight endpoints.
+metadata_max_age_days = 30 # Type/airline names survive longer than route matches.
 
 [atmosphere]
 enabled = true

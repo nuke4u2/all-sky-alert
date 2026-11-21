@@ -19,7 +19,7 @@ to catch misspelled settings. Restart after edits. Tables isolate concerns:
 | detectors.adsb | enabled, interval_seconds, elevation entry/exit, bounded projection, episode gap, range, interest lists/squawks |
 | providers.orbits | enabled, catalog_ids, two-hour minimum cache, epoch warning/stale/invalid, tighter transit gates |
 | providers.adsb | enabled, radius_nm, cache_seconds, position stale/invalid thresholds |
-| providers.enrichment | enabled, user-licensed JSON path, long cache, independent metadata age |
+| providers.enrichment | enabled, local/vrs mode, licensed JSON path or bounded weekly public catalog, independent route/name expiry; [cache details](aircraft-enrichment.md) |
 | atmosphere | enabled, cache_minutes, max_stale_hours, forecast_days |
 | atmosphere.canadian | enabled, metadata cache/stale limits, maximum model-run age and grid-point distance |
 | notifications | enabled, interest/quality/confidence thresholds, exceptional-interest bypass, milestone lead times |
@@ -193,9 +193,14 @@ It groups variants into model families, not an exact variant or license-built
 manufacturer determination; unfamiliar codes remain unknown. Type provenance is
 shown in the aircraft details. UI reads never acquire upstream metadata.
 
-**Optional airline/route/type enrichment:** disabled by default. No unrestricted live route
-source was verified; ADSBDB route data require permission and are not incorporated.
-You may supply a JSON file containing records you own or have permission to use:
+**Optional airline/route/type enrichment:** disabled by default. The public
+`mode="vrs"` uses a bounded weekly CC0 catalog cache; its route endpoints are
+unconfirmed callsign matches, with separate route/name expiry. See
+[public cache setup and limits](aircraft-enrichment.md). ADSBDB route data still
+require permission and are not incorporated.
+
+The existing `mode="local"` accepts a JSON file containing records you own or
+have permission to use:
 
 ```json
 [
@@ -211,7 +216,8 @@ You may supply a JSON file containing records you own or have permission to use:
 ```
 
 This is a **synthetic schema example**, not real flight information. Set
-`providers.enrichment.enabled=true` and `path` to your own file, relative to config.
+`providers.enrichment.enabled=true`, `mode="local"` and `path` to your own file,
+relative to config. The following binding/expiry rules describe this local mode.
 Airline and routes require exact aircraft **and** callsign binding; routes also
 require both endpoints. Airline is never guessed from a callsign or owner.
 `manufacturer` and `base_model` are optional but must be supplied together; they

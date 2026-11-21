@@ -23,10 +23,11 @@
     add(detail,'p',summary.type_method+(summary.type_source_name?' · '+summary.type_source_name:'')).className='muted';
     if(meta)add(detail,'p','Metadata: '+meta.source_name+' · '+meta.age_seconds+' seconds old. '+(meta.updated_at?localTime(meta.updated_at):'Unknown'));
     if(summary.airline_source_name)add(detail,'p','Airline source: '+summary.airline_source_name+'.').className='muted';
-    if(summary.route_source_name)add(detail,'p','Route source: '+summary.route_source_name+'. Reported endpoints; the dashed line is not this route.');
+    if(summary.route_source_name)add(detail,'p','Route source: '+summary.route_source_name+'. '+(summary.route_note?'Catalog endpoints; ':'Reported endpoints; ')+'the dashed line is not this route.');
     add(detail,'p','Dashed projection is a short estimate; turns/climbs and visual detection are unresolved.');
   }
   function route(parent,summary){
+    if(summary.route_note)add(parent,'span',summary.route_note).className='muted';
     const endpoints=add(parent,'span','');endpoints.className='aircraft-route';
     for(const [label,value] of [['Origin',summary.origin],['Destination',summary.destination]]){
       const endpoint=add(endpoints,'span','');
@@ -65,7 +66,7 @@
         current.set(row.icao24,row);const items=[];
         const summary=row.aircraft_summary;
         const label=document.createElement('span');label.className='aircraft-tooltip';
-        add(label,'strong',summary.airline);add(label,'strong',summary.type_name);add(label,'span',summary.origin+' → '+summary.destination);add(label,'small',summary.identity);
+        add(label,'strong',summary.airline);add(label,'strong',summary.type_name);add(label,'span',(summary.route_note?'Catalog (unconfirmed): ':'')+summary.origin+' → '+summary.destination);add(label,'small',summary.identity);
         const marker=L.circleMarker([row.latitude,row.longitude],{radius:9,color:'#4bcaff',fillOpacity:0.8,weight:2}).addTo(layer).bindTooltip(label);
         marker.on('click',()=>show(row));items.push(marker);
         const solid=L.polyline(row.history.map(p=>[p.latitude,p.longitude]),{color:'#4bcaff',weight:3}).addTo(layer);items.push(solid);

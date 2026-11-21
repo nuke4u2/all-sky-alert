@@ -89,3 +89,40 @@ milestone/daily/weekly identities, DST/catch-up behavior and UNKNOWN semantics.
 Use fake adapters; do not read production predictions for a bounded handoff unless
 the task explicitly authorizes it. Previews must not initialize Service, migrate
 the database, acquire data or access OAuth credentials.
+
+## Current aircraft enrichment implementation
+
+The optional CC0 VRS standing-data cache is implemented; see
+[operation and resource limits](docs/aircraft-enrichment.md). Existing configs
+retain `providers.enrichment.mode="local"` and enrichment remains disabled by
+default. Settings exposes a public-catalog choice, enable toggle and validation
+age controls; saving still requires restart. No actual deployment config changed.
+
+`standing_data.py` streams a bounded weekly conditional archive into a reduced
+SQLite database beside the main application database. A credential-free static
+catalog/import check produced a 6.8 MiB download and 31.6 MiB database. Fixed caps
+are 16 MiB download, 64 MiB DB/expanded archive and 750k CSV rows. Individual row
+update times are unknown; successful validation is not a live flight observation.
+ADSBDB's separate data restriction remains unchanged and its API/data are unused.
+
+`sources.py` injects the existing ADS-B snapshot provider. `Service` runs the
+optional provider `maintain(now)` hook only in the serial slow lane; live refresh
+does bounded indexed local reads and publishes an immutable frame. Presentation
+and detector `at()` reads have no I/O. Failed builds keep the old database with
+persisted backoff. Route expiry (14 days by default) is independent of model/
+airline expiry (30 days). Catalog endpoints are explicitly unconfirmed across
+cards/map/email; multistop/ambiguous matches stay unknown. PIA/LADD/anonymized
+states still pass through existing exclusion before lookup. No registration,
+owner or serial-number columns are retained. No dependencies/schema migration
+were added, and no Pi service was restarted or deployed in this task.
+
+Verification on Windows: 75 targeted tests passed, including synthetic archive,
+failure/backoff/expiry, settings, detector/mail and slow/live maintenance tests.
+Full suite: 455 passed, 2 existing failures in
+`test_local_times.py::test_service_mail_and_ui_use_configured_timezone` (exact body
+tag) and `test_swpc_aurora.py::test_aurora_composed_ui_source_expiry_and_disabled_provider`
+(obsolete Now heading). These dashboard assertions also failed before this task.
+Tests block live network and use private scratch databases. Raspberry Pi runtime/
+performance acceptance remains pending; use the documented updater before enabling
+the public cache. Pre-existing Jupiter/dashboard edits in the working tree were
+preserved and are outside this aircraft task.

@@ -120,6 +120,8 @@ class AircraftDetector:
             identity = state.callsign or f"Aircraft {state.icao24.upper()}"
             type_name = (enriched.get("type_name") if enriched else None) or state.type_code
             route = f" from {enriched['origin']} to {enriched['destination']}" if enriched and enriched.get("origin") and enriched.get("destination") else ""
+            if route and enriched.get("route_note"):
+                route = f" (catalog route {enriched['origin']} to {enriched['destination']}; current endpoints unconfirmed)"
             type_text = f", {type_name}," if type_name else ""
             movement = f" moving across the sky from {at['from_direction']} toward {at['toward_direction']}" if at["toward_direction"] else ""
             if at["from_direction"] == at["toward_direction"]:
@@ -147,7 +149,8 @@ class AircraftDetector:
             sources = [Source("ADSB.lol", "https://www.adsb.lol/docs/open-data/api/",health["retrieved_at"],
                               "ODbL 1.0 / readsb seen_pos; WGS84 ENU geometry")]
             if enriched:
-                sources.append(Source(enriched["source_name"],enriched["source_url"],enriched["retrieved_at"],"User-licensed non-gating metadata; update "+enriched["updated_at"]))
+                sources.append(Source(enriched["source_name"],enriched["source_url"],enriched["retrieved_at"],
+                    enriched.get("method", "User-licensed non-gating metadata; update "+enriched["updated_at"])))
             candidates.append(Candidate(episode["episode_id"],self.name,"aircraft.episode",context.observer.key,episode["episode_id"],f"{identity} · {state_name.lower()}",
                 start,peak,end,round(interest,1),.75 if current else .5,"aircraft",reasons,sources,at,
                 {"icao24":state.icao24,"callsign":state.callsign,"type_code":state.type_code,"squawk":state.squawk,

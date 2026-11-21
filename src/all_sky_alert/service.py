@@ -140,6 +140,16 @@ class Service:
         worker = "worker" if lane is None else f"worker:{lane}"
         self.store.health(worker, "evaluating", now, "Evaluating predictions")
         self.store.advance(now, self.config.values["notifications"]["imminent_lead_minutes"])
+        # Bulk catalog maintenance belongs to the serial slow lane even when its
+        # only detector consumer is live. Live refreshes publish local lookups.
+        if lane in (None, "slow"):
+            for key, source in self.sources.items():
+                maintain = getattr(source, "maintain", None)
+                if maintain is not None:
+                    try:
+                        maintain(now)
+                    except Exception as exc:
+                        self.store.health(f"source:{key}", "error", now, type(exc).__name__)
         if lane in (None, "slow") and (not isinstance(self.conditions, ConditionsService) or self.conditions.consumers):
             try:
                 self.conditions.refresh(now)

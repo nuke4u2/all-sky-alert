@@ -23,9 +23,14 @@ def field_definitions():
             ("detectors.jupiter.grs_enabled","Jupiter Great Red Spot (dated reference)"),
             ("providers.adsb.enabled","ADSB.lol positions"),("providers.orbits.enabled","CelesTrak orbits"),
             ("providers.swpc.enabled","NOAA aurora"),("providers.hrrr.enabled","Experimental HRRR microphysics"),
+            ("providers.enrichment.enabled","Aircraft labels / route enrichment"),
             ("notifications.enabled","Local alert milestones"),("gmail.enabled","Gmail delivery"),
             ("map.enabled","Aircraft map"),("map.tiles_enabled","Online map tiles")):
         add(path,label,"bool")
+    add("providers.enrichment.mode", "Aircraft enrichment source", "choice")
+    fields["providers.enrichment.mode"]["choices"] = [
+        {"value": "local", "label": "Licensed local file"},
+        {"value": "vrs", "label": "Public catalog (weekly cache)"}]
     for path,label in (("service.recent_hours","Recent history (hours)"),
             ("notifications.minimum_interest","Minimum alert interest"),("notifications.minimum_quality","Minimum observing quality"),
             ("notifications.minimum_confidence","Minimum occurrence/observing confidence (0–1)"),
@@ -41,6 +46,10 @@ def field_definitions():
             ("detectors.sky_crystals.horizon_hours","Crystal forecast horizon (hours)"),
             ("detectors.sky_crystals.diamond_temperature_c","Diamond-dust temperature ceiling (°C)")):
         add(path,label,"number")
+    for key,label in (("refresh_days","Aircraft catalog refresh (days)"),
+                      ("routes_max_age_days","Catalog route maximum validation age (days)"),
+                      ("metadata_max_age_days","Aircraft names maximum validation age (days)")):
+        add("providers.enrichment."+key,label,"number")
     for mode in MODES:
         prefix='gmail.'+mode+'.'
         add(prefix+'enabled',{'immediate':'Immediate high-interest alerts','daily_digest':'Daily observing digest','weekly_digest':'Weekly long-range look-ahead'}[mode],'bool')
