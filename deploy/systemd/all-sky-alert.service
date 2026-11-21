@@ -1,5 +1,6 @@
 # Render/install with scripts/install_systemd.py after foreground validation.
 # @...@ values are filled by the installer; do not install this template directly.
+# Updates: python3 scripts/update_pi.py (reuses this venv; reinstalls before start).
 [Unit]
 Description=All Sky Alert predictions and General Pi Camera / Timelapse
 Wants=network-online.target

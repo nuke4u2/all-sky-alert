@@ -31,16 +31,13 @@ takes effect. Check `hostname` is `allsky-pi4`, `uname -m` is `aarch64`, and
 
 ```bash
 cd ~/projects/all-sky-alert
-python3 -m venv --system-site-packages .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip setuptools wheel
-python -m pip install -r requirements.txt
-python -m pip check
-which python
-python --version
-python -c "import all_sky_alert; print('All Sky Alert OK')"
-python -c "from picamera2 import Picamera2; print('Picamera2 OK')"
-python -c "import astronomy, fastapi, skyfield, sgp4, tomlkit, picamera2, libcamera, numpy; print('Imports OK; NumPy:', numpy.__version__, numpy.__file__)"
+test -d .venv || python3 -m venv --system-site-packages .venv
+.venv/bin/python -m pip install --upgrade pip setuptools wheel
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python --version
+.venv/bin/python -c "import sys, all_sky_alert; print(sys.executable); print('All Sky Alert OK')"
+.venv/bin/python -c "from picamera2 import Picamera2; print('Picamera2 OK')"
+.venv/bin/python -c "import astronomy, fastapi, skyfield, sgp4, tomlkit, picamera2, libcamera, numpy; print('Imports OK; NumPy:', numpy.__version__, numpy.__file__)"
 ```
 
 The [Raspberry Pi camera documentation](https://www.raspberrypi.com/documentation/computers/camera_software.html)
@@ -73,18 +70,18 @@ both snapshots after successful hardware acceptance:
 ```bash
 mkdir -p test-artifacts/pi-install
 dpkg-query -W python3 python3-picamera2 python3-libcamera python3-numpy python3-pil rpicam-apps-lite > test-artifacts/pi-install/apt-versions.txt
-python -m pip freeze > test-artifacts/pi-install/python-versions.txt
+.venv/bin/python -m pip freeze > test-artifacts/pi-install/python-versions.txt
 ```
 
 Optional packages, only when configured:
 
 ```bash
 # Optional Gmail; does not authorize or send mail.
-python -m pip install -c constraints.txt '.[gmail]'
+.venv/bin/python -m pip install -c constraints.txt '.[gmail]'
 # Optional offline tests.
-python -m pip install -c constraints.txt '.[dev]'
+.venv/bin/python -m pip install -c constraints.txt '.[dev]'
 # Optional sparse HRRR decoder; validate ARM64 decoder availability separately.
-python -m pip install -c constraints.txt '.[hrrr]'
+.venv/bin/python -m pip install -c constraints.txt '.[hrrr]'
 ```
 
 Keep HRRR disabled for the initial Pi acceptance. Core packages are portable
@@ -264,6 +261,60 @@ uncertain driver state. The core service remains available. No automatic camera
 hotplug/reconnect or retention deletion is implemented. Monitor free disk space
 and plan storage/backup manually; large JPEG timelapses can exhaust an SD card.
 
+## Updating the installed service
+
+Keep the one existing project `.venv`. Activation is optional shell lookup, not
+environment creation; all application commands here name `.venv/bin/python`
+directly. Run venv creation only during first installation, never during updates.
+
+From an installed Pi checkout, use one command for the complete deployment:
+
+```bash
+cd ~/projects/all-sky-alert
+python3 scripts/update_pi.py
+```
+
+This standard-library launcher works even when the installed application is old.
+It stops systemd before pulling, permits only fast-forward Git updates, builds a
+new wheel in a clean temporary tree, resolves dependencies from `pyproject.toml`
+under `constraints.txt`, and force-reinstalls only that application wheel into
+the existing `.venv`. It verifies imported files against the checkout, checks the
+existing config/database offline, refreshes the unit without starting, validates
+its effective checkout/interpreter/config, clears failed-start limiting and
+starts only after success. It waits for the HTTP health route and confirms the
+service remains active. Failures after stop leave it stopped, including a failed
+startup; there is no silent rollback, Git reset/stash or automatic config-sync.
+
+If you already pulled, use `python3 scripts/update_pi.py --no-pull`. For the
+first update that introduces this script:
+
+```bash
+sudo systemctl stop all-sky-alert
+cd ~/projects/all-sky-alert
+git pull --ff-only && python3 scripts/update_pi.py --no-pull
+```
+
+The updater runs as the service account, with sudo only for systemd/unit
+operations. It requires an already installed service, the existing Pi venv with
+system site packages, and no tracked local edits. Untracked backups and ignored
+private config/data remain in place. `--config /path/to/config.toml` selects an
+existing custom config; `--extras gmail,hrrr` refreshes declared optional extras.
+`--scratch-dir /path/to/existing/scratch` relocates disposable build outputs.
+It copies only source/build metadata into that tree, never runtime config/data.
+Back up the database before updating. Package/config checks do not acquire feeds
+or send mail; normal enabled acquisition and delivery resume when the service
+starts. Application settings, OAuth material and captures are not rewritten.
+
+No broad pip force-reinstall is used on the apt NumPy/camera stack. Compatible
+installed dependencies remain usable; the project's resolver handles required
+changes. A full `pip check` may report unrelated system packages exposed by the
+Pi's `--system-site-packages` venv, as in the reported apt/stub warnings. Those
+unrelated package errors are not used as the updater's deployment gate.
+
+Deployment sequencing, package-file mismatch detection, failure handling and
+HTTP readiness are tested offline on Windows with Git/pip/systemd mocked. Native
+Pi/systemd execution remains a target-device acceptance check.
+
 ## Review and install systemd
 
 ### Unknown detector configuration after an update
@@ -295,23 +346,13 @@ copy. The log showing `check` accepting meteors and a later command rejecting it
 is consistent with a different/stale installed copy; it does not establish which
 interpreter or package differed without runtime output from the failing process.
 
-After deploying the current source, stop before reinstalling, use the exact venv
-interpreter named by systemd, and stop this sequence if an installation or check
-fails. Reinstall only the project when dependencies have already been installed:
+The confirmed failure was a current checkout with an older installed wheel in
+the correct `.venv`. Once this updater is present, complete deployment with:
 
 ```bash
 sudo systemctl stop all-sky-alert
 cd ~/projects/all-sky-alert
-git status
-git pull --ff-only
-.venv/bin/python -m pip install --no-deps --force-reinstall .
-.venv/bin/python -m all_sky_alert runtime-info
-.venv/bin/python -m all_sky_alert --config config.toml check
-# Run only after the checks above pass.
-sudo systemctl reset-failed all-sky-alert
-sudo systemctl start all-sky-alert
-systemctl status all-sky-alert --no-pager
-journalctl -u all-sky-alert.service -n 100 --no-pager -o cat
+python3 scripts/update_pi.py --no-pull
 ```
 
 `reset-failed` clears systemd's rapid-restart limit after the underlying error

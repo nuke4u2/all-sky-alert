@@ -86,16 +86,13 @@ mkdir -p ~/projects
 cd ~/projects
 git clone https://github.com/nuke4u2/all-sky-alert.git
 cd ~/projects/all-sky-alert
-python3 -m venv --system-site-packages .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip setuptools wheel
-python -m pip install -r requirements.txt
-which python
-python --version
-python -m pip check
-python -c "import all_sky_alert; print('All Sky Alert OK:', all_sky_alert.__file__)"
-python -c "from picamera2 import Picamera2; print('Picamera2 OK')"
-python -c "import libcamera, numpy; print('NumPy:', numpy.__version__, numpy.__file__)"
+test -d .venv || python3 -m venv --system-site-packages .venv
+.venv/bin/python -m pip install --upgrade pip setuptools wheel
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python --version
+.venv/bin/python -c "import sys, all_sky_alert; print(sys.executable); print('All Sky Alert OK:', all_sky_alert.__file__)"
+.venv/bin/python -c "from picamera2 import Picamera2; print('Picamera2 OK')"
+.venv/bin/python -c "import libcamera, numpy; print('NumPy:', numpy.__version__, numpy.__file__)"
 ```
 
 The repository is already cloned on your Pi: skip `git clone` there. Inspect an
@@ -104,6 +101,11 @@ Python and have `include-system-site-packages = true`. A Windows venv cannot be
 reused. If a stopped installation has the wrong venv, preserve it first with
 `mv .venv .venv.before-pi-audit` (choose an unused backup name), then recreate it
 using the commands above. Do not replace a running service's environment.
+
+This is **one-time setup**, not the update procedure. Keep the existing project
+`.venv`; all commands name its interpreter explicitly. Shell activation is
+unnecessary. Activating a venv changes shell lookup only and does not create a
+new environment. For routine updates use the updater below.
 
 **Why `--system-site-packages`:** apt installs Raspberry Pi's matched Picamera2 /
 libcamera Python bindings and native dependencies in the system interpreter's
@@ -346,12 +348,11 @@ See [startup recovery](docs/raspberry-pi.md#unknown-detector-configuration-after
 Optional tests need only the dev extra, not browser/container packages:
 
 ```bash
-source .venv/bin/activate
-python -m pip install -c constraints.txt '.[dev]'
-python -m pytest
-python -m pytest tests/test_camera.py tests/test_lan_settings.py
-python -m compileall -q src tests scripts
-python -m pip check
+.venv/bin/python -m pip install -c constraints.txt '.[dev]'
+.venv/bin/python -m pytest
+.venv/bin/python -m pytest tests/test_camera.py tests/test_lan_settings.py
+.venv/bin/python -m compileall -q src tests scripts
+.venv/bin/python -m pip check
 ```
 
 Tests block network and mock camera hardware. Optional HRRR decoder tests skip
@@ -368,7 +369,7 @@ disabled upstream/mail, without reading live files:
 
 - **Picamera2 import fails:** verify the system interpreter, apt package and
   `.venv/pyvenv.cfg` system-site setting. Do not repair it with pip Picamera2.
-- **Install conflict or binary import failure:** run `pip check`, confirm NumPy
+- **Install conflict or binary import failure:** run `.venv/bin/python -m pip check`, confirm NumPy
   resolves from apt on the Pi, and record apt/pip versions. Do not copy Windows
   wheels or silently replace the camera's native dependency stack.
 - **Cannot save Settings/SQLite/captures:** check the service account owns the
@@ -385,24 +386,49 @@ disabled upstream/mail, without reading live files:
 
 ## Development and updates
 
-For a stopped native deployment:
+For routine updates to the installed Pi service, run as the normal service user:
 
 ```bash
-sudo systemctl stop all-sky-alert   # omit if using a stopped foreground server
 cd ~/projects/all-sky-alert
-git status
-git pull --ff-only
-.venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python -m pip check
-.venv/bin/python -m all_sky_alert runtime-info
-.venv/bin/python -m all_sky_alert --config config.toml check
-sudo systemctl start all-sky-alert  # or restart the foreground serve command
-systemctl status all-sky-alert --no-pager
+python3 scripts/update_pi.py
 ```
 
-Preserve private config/secrets/history, stop before maintenance, and back up the
-database before upgrades. Do not run `config-sync` automatically against live
-config. Windows PowerShell setup/testing is preserved in
+The updater stops the service **before** `git pull --ff-only`, builds a fresh
+wheel, installs declared dependencies and force-reinstalls only All Sky Alert
+into the existing `.venv`. It compares installed application files with the
+checkout, runs the offline config/database check, refreshes the systemd unit,
+checks its effective checkout/interpreter/config, clears the failed-start limit,
+starts the service and waits for HTTP health. A failed step stops deployment;
+after stopping the service it stays stopped on failure. Tracked local edits must
+be resolved first; ignored private config/data and untracked backups are retained.
+
+**A bare `git pull` updates the workspace, not the installed Python package or
+running service.** If you already pulled, finish deployment with:
+
+```bash
+python3 scripts/update_pi.py --no-pull
+```
+
+To obtain this updater for the first time, stop the old service before pulling:
+
+```bash
+sudo systemctl stop all-sky-alert
+cd ~/projects/all-sky-alert
+git pull --ff-only && python3 scripts/update_pi.py --no-pull
+```
+
+Use `--config /path/to/config.toml` for a custom config. Use `--extras gmail` (or
+`--extras gmail,hrrr`) to refresh selected optional dependencies too. The updater
+does not create/recreate venvs or edit application config, OAuth files or captures.
+It refreshes the unit with the existing venv and selected config; conflicting
+systemd overrides are reported before starting. It does not bulk-force-reinstall
+apt NumPy/camera dependencies. A global `pip check` can report unrelated packages
+exposed by `--system-site-packages`; deployment relies on the project's dependency
+resolver, file verification and startup checks rather than unrelated package errors.
+
+Back up the database before upgrades. Do not run `config-sync` automatically
+against live config. More [Pi update details](docs/raspberry-pi.md#updating-the-installed-service).
+Windows PowerShell setup/testing is preserved in
 [Windows development only](docs/windows-development.md). The
 [handoff](HANDOFF.md) and [development contracts](AGENTS.md) govern local changes;
 no runtime LLM or agent orchestration dependency is required.
