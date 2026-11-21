@@ -18,6 +18,7 @@ import subprocess
 import sys
 from tempfile import TemporaryDirectory
 import time
+import tomllib
 from urllib.error import URLError
 from urllib.request import HTTPCookieProcessor, ProxyHandler, Request, build_opener
 
@@ -25,22 +26,40 @@ import tomlkit
 
 import all_sky_alert
 from all_sky_alert.config import DEFAULTS
+from all_sky_alert.cli import runtime_info
 from all_sky_alert.domain import Observer
+
+
+def verify_detector_schema(example):
+    """Compare this checkout's example with the actually imported package."""
+    info = runtime_info()
+    expected = set(example["detectors"])
+    if expected != set(info["registered_detectors"]) or expected != set(info["configuration_detectors"]):
+        raise ValueError("Installed detector registry/schema does not match this checkout's config.example.toml. "
+                         f"Runtime: {json.dumps(info, sort_keys=True)}. Reinstall with the same venv Python.")
+    for name, settings in example["detectors"].items():
+        if set(settings)-set(DEFAULTS["detectors"][name]):
+            raise ValueError(f"Installed detector schema does not support this checkout's {name} example settings")
+    return info
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--camera', action='store_true', help='Explicit real hardware test; fails when unavailable')
     parser.add_argument('--require-installed', action='store_true', help='Reject source/editable imports')
+    parser.add_argument('--output-dir', type=Path, help='Scratch directory for private smoke artifacts and logs')
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     imported = Path(all_sky_alert.__file__).resolve()
     if args.require_installed and imported.is_relative_to(root / 'src'):
         parser.error('Use a non-editable requirements.txt installation for this check')
-    output = root / 'test-artifacts/pi-native-smoke'
+    with (root / 'config.example.toml').open('rb') as example_file:
+        info = verify_detector_schema(tomllib.load(example_file))
+    output = args.output_dir.resolve() if args.output_dir else root / 'test-artifacts/pi-native-smoke'
     output.mkdir(parents=True, exist_ok=True)
     report = {'host_platform': sys.platform, 'package': str(imported), 'python': sys.version,
-              'hardware_requested': args.camera, 'private_storage': True, 'upstream_and_mail': False}
+              'hardware_requested': args.camera, 'private_storage': True, 'upstream_and_mail': False,
+              'runtime': info}
     environment = dict(os.environ)
     environment.pop('PYTHONPATH', None)
     environment.pop('PYTHONHOME', None)
@@ -50,6 +69,11 @@ def main():
         directory = Path(private)
         values = deepcopy(DEFAULTS)
         for section in values['detectors'].values(): section['enabled'] = False
+        # Exercise both new registrations through check, serve, Settings and the
+        # real background lane, with only offline geometry and no notifications.
+        for name in ('meteors', 'lunar_occultations'):
+            values['detectors'][name]['enabled'] = True
+        values['detectors']['lunar_occultations']['horizon_days'] = 2
         for section in values['providers'].values(): section['enabled'] = False
         values['atmosphere']['enabled'] = values['atmosphere']['canadian']['enabled'] = False
         values['notifications']['enabled'] = values['gmail']['enabled'] = False
@@ -60,6 +84,7 @@ def main():
         checked = subprocess.run([sys.executable, '-m', 'all_sky_alert', '--config', str(path), 'check'],
             cwd=directory, env=environment, text=True, capture_output=True, timeout=30, check=True)
         report['configuration_and_sqlite_write'] = 'SQLite writable' in checked.stdout
+        assert 'meteors' in checked.stdout and 'lunar_occultations' in checked.stdout
         with socket.socket() as probe:
             probe.bind(('127.0.0.1', 0))
             port = probe.getsockname()[1]
@@ -92,6 +117,10 @@ def main():
                 health = json.loads(read('/api/health'))
                 wait_for(lambda: any(row['name'] == 'worker:slow' and row['status'] == 'ok'
                     for row in json.loads(read('/api/health'))['components']))
+                components = json.loads(read('/api/health'))['components']
+                for name in ('meteors', 'lunar_occultations'):
+                    assert any(row['name'] == f'detector:{name}' and row['status'] == 'ok' for row in components), name
+                report['offline_detectors_evaluated'] = ['meteors', 'lunar_occultations']
                 report['http_routes_and_worker'] = True
                 report['sources'] = health['sources']
                 if args.camera:

@@ -329,6 +329,20 @@ provider; disable them in Settings if desired.
 
 ## Testing and troubleshooting
 
+For `Unknown configuration: detectors.meteors` (or another newly added family),
+keep the valid detector table and first compare the imported installation:
+
+```bash
+.venv/bin/python -m all_sky_alert runtime-info
+```
+
+This reads no configuration, database or credentials. It shows the exact Python,
+package/config/registry paths and both registered/schema detector lists. `check`
+and `serve` print the same runtime identity before loading config, including when
+validation fails. Both commands use the same strict loader; a successful check
+followed by an unknown-family error needs a comparison of those runtime identities.
+See [startup recovery](docs/raspberry-pi.md#unknown-detector-configuration-after-an-update).
+
 Optional tests need only the dev extra, not browser/container packages:
 
 ```bash
@@ -378,10 +392,10 @@ sudo systemctl stop all-sky-alert   # omit if using a stopped foreground server
 cd ~/projects/all-sky-alert
 git status
 git pull --ff-only
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-python -m pip check
-python -m all_sky_alert --config config.toml check
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m pip check
+.venv/bin/python -m all_sky_alert runtime-info
+.venv/bin/python -m all_sky_alert --config config.toml check
 sudo systemctl start all-sky-alert  # or restart the foreground serve command
 systemctl status all-sky-alert --no-pager
 ```

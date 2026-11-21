@@ -266,6 +266,72 @@ and plan storage/backup manually; large JPEG timelapses can exhaust an SD card.
 
 ## Review and install systemd
 
+### Unknown detector configuration after an update
+
+`[detectors.meteors]` and `[detectors.lunar_occultations]` are valid current
+tables. Detector defaults, validation, service construction, Settings and Gmail
+families all derive from the explicit registry. `check` and `serve` load config
+through the same function. Do not remove a valid table to make an older package
+start, or weaken unknown-key validation; that can conceal an incomplete deployment.
+
+Both startup commands now print `Runtime:` before validation. Compare the
+interpreter, package/config/registry paths and registered/schema detector lists
+between a foreground check and the journal. This safe command works without
+reading even an invalid/missing config file:
+
+```bash
+cd ~/projects/all-sky-alert
+.venv/bin/python -m all_sky_alert runtime-info
+systemctl cat all-sky-alert.service
+journalctl -u all-sky-alert.service -n 150 --no-pager -o cat
+```
+
+The reported registered and configuration detector lists should both contain
+`meteors` and `lunar_occultations`. The package version alone is not an adequate
+comparison: development changes can share `0.1.0`. A source checkout and a
+non-editable installation are separate copies; pulling source alone does not
+update an installed wheel. Activation or `PYTHONPATH` can also select another
+copy. The log showing `check` accepting meteors and a later command rejecting it
+is consistent with a different/stale installed copy; it does not establish which
+interpreter or package differed without runtime output from the failing process.
+
+After deploying the current source, stop before reinstalling, use the exact venv
+interpreter named by systemd, and stop this sequence if an installation or check
+fails. Reinstall only the project when dependencies have already been installed:
+
+```bash
+sudo systemctl stop all-sky-alert
+cd ~/projects/all-sky-alert
+git status
+git pull --ff-only
+.venv/bin/python -m pip install --no-deps --force-reinstall .
+.venv/bin/python -m all_sky_alert runtime-info
+.venv/bin/python -m all_sky_alert --config config.toml check
+# Run only after the checks above pass.
+sudo systemctl reset-failed all-sky-alert
+sudo systemctl start all-sky-alert
+systemctl status all-sky-alert --no-pager
+journalctl -u all-sky-alert.service -n 100 --no-pager -o cat
+```
+
+`reset-failed` clears systemd's rapid-restart limit after the underlying error
+has been addressed. A later camera, port or lifespan error needs its own journal
+message; config validation alone does not exercise those operations.
+
+For a private installed-package acceptance test (no actual config, production
+SQLite, credentials, mail, upstream feeds or camera), run:
+
+```bash
+.venv/bin/python scripts/pi_native_smoke.py --require-installed
+```
+
+The smoke checks the installed registry/schema against this checkout's example
+before startup. Both new detectors are enabled with a short, offline horizon,
+weather/mail/providers disabled, and private temporary config/SQLite. It checks
+`check`, actual `serve`, HTTP/Settings, detector worker health and shutdown. Use
+`--output-dir /a/project-specific/scratch/directory` to relocate logs/artifacts.
+`--camera` remains a separate explicit hardware test.
+
 The [installer](../scripts/install_systemd.py) renders
 [deploy/systemd/all-sky-alert.service](../deploy/systemd/all-sky-alert.service)
 using its checkout path and the current unprivileged SSH account. The unit uses

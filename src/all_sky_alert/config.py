@@ -42,6 +42,11 @@ def merge(default: dict, supplied: dict, path: str = "") -> dict:
     result = deepcopy(default)
     for key, value in supplied.items():
         if key not in default:
+            if path == "detectors.":
+                raise ValueError(f"Unknown configuration: {path}{key}. "
+                                 f"Registered detector families in this schema: {', '.join(sorted(default))}. "
+                                 "Check runtime-info and reinstall the intended checkout with the service's venv Python; "
+                                 "valid new detector tables should not be removed to work around an older installation.")
             raise ValueError(f"Unknown configuration: {path}{key}")
         if isinstance(default[key], dict):
             if not isinstance(value, dict):

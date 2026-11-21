@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import uuid
 
 from .config import load
@@ -8,6 +9,24 @@ from .domain import iso, utcnow
 from .locking import ServiceLock
 from .notifications import GmailAdapter, authorize, render_message
 from .service import Service
+
+
+def runtime_info():
+    """Identify the imported implementation without opening config or runtime data."""
+    import sys
+    from importlib.metadata import PackageNotFoundError, version
+    from pathlib import Path
+    from . import config, registry
+    try:
+        installed_version = version("all-sky-alert")
+    except PackageNotFoundError:
+        installed_version = "uninstalled source"
+    return {"python": sys.executable, "version": installed_version,
+            "package": str(Path(__file__).resolve().parent),
+            "config_module": str(Path(config.__file__).resolve()),
+            "registry_module": str(Path(registry.__file__).resolve()),
+            "registered_detectors": sorted(registry.DETECTORS),
+            "configuration_detectors": sorted(config.DEFAULTS["detectors"])}
 
 
 def test_alert():
@@ -29,6 +48,7 @@ def main():
     serve.add_argument("--port", type=int, default=None)
     commands.add_parser("evaluate", help="One evaluation cycle, using enabled notification adapters")
     commands.add_parser("check", help="Offline config, database write and component initialization check; stop service first; no fetch/mail/camera open")
+    commands.add_parser("runtime-info", help="Show interpreter, imported package/schema paths and registered detectors; no config, database, feeds or credentials read")
     commands.add_parser('config-sync',help='Validate and add missing defaults, preserving all supplied values; restart required')
     commands.add_parser("reset-orbit-source", help="Explicitly clear CelesTrak HTTP stop after investigating the error; no fetch/email")
     smoke = commands.add_parser("source-smoke", help="Explicit public-source connectivity check; separate storage, no mail/credentials")
@@ -48,6 +68,13 @@ def main():
     retry.add_argument("--acknowledge-possible-duplicate", action="store_true")
     args = parser.parse_args()
     try:
+        if args.command == "runtime-info":
+            print(json.dumps(runtime_info(), indent=2))
+            return
+        if args.command in ("check", "serve"):
+            # Print before validation so a rejected new detector table still
+            # identifies the exact interpreter/package/schema used by systemd.
+            print("Runtime: " + json.dumps(runtime_info(), sort_keys=True), flush=True)
         config = load(args.config)
         gmail = config.values["gmail"]
         if args.command.startswith('preview-'):
@@ -75,7 +102,6 @@ def main():
             print('Configuration synchronized; existing values preserved. Restart required. Omitted detectors retain safe disabled defaults.')
             return
         if args.command == "source-smoke":
-            import json
             import httpx
             from .storage import Store
             from .sources import build_sources
